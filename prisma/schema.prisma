@@ -6,3 +6,20 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model user {
+  id       Int    @id @default(autoincrement())
+  email    String @unique
+  name     String
+  lastname String
+  rut      Int    @unique
+  rut_dv   Int
+  password String @db.VarChar(3000)
+  role     Role   @default(USER)
+}
+
+enum Role {
+  USER
+  VET
+  ADMIN
+}

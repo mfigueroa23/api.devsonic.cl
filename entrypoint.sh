@@ -8,4 +8,4 @@ echo -e "\n[i] Actualizando cliente de base de datos...\n"
 npx prisma generate
 
 echo -e "\n[i] Iniciando el servidor...\n"
-node main.js 
+node ./scr/main.js 

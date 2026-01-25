@@ -7,6 +7,12 @@ datasource db {
   provider = "postgresql"
 }
 
+model property {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}
+
 model user {
   id       Int    @id @default(autoincrement())
   email    String @unique
@@ -20,6 +26,6 @@ model user {
 
 enum Role {
   USER
-  VET
   ADMIN
+  VET
 }

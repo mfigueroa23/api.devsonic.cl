@@ -2,7 +2,7 @@ name: "Release API Devsonic Project"
 on:
   push:
     branches:
-      - master
+      - API-4-arreglar-error-en-prisma-client-ci-cd
 jobs:
   
   build:
@@ -21,7 +21,14 @@ jobs:
       
       - name: "Installing project dependencies"
         run: npm i
+
+      - name: "Setting up .env file"
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
       
+      - name: "Setting up Prisma"
+        run: npx prisma generate
+
       - name: "Creating dist"
         run: npm run build
 
@@ -59,8 +66,6 @@ jobs:
       
       - name: "Setting up Docker Buildx"
         uses: docker/setup-buildx-action@v3
-        with:
-          install: true
       
       - name: "Building and pushing Docker Image"
         run: |

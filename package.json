@@ -5,6 +5,7 @@
   "author": "Marco Figueroa <mfigueroa@devsonic.cl>",
   "private": true,
   "license": "UNLICENSED",
+  "type": "module",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",

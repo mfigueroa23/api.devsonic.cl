@@ -5,4 +5,4 @@ echo "\n[i] Generando cliente de base de datos..."
 npx prisma generate
 
 echo "\n[i] Iniciando el servidor..."
-node ./src/main.js
+node ./main.js

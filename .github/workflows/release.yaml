@@ -2,7 +2,7 @@ name: "Release API Devsonic Project"
 on:
   push:
     branches:
-      - API-4-arreglar-error-en-prisma-client-ci-cd
+      - master
 jobs:
   build:
     runs-on: ubuntu-latest

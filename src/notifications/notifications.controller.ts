@@ -8,7 +8,7 @@ export class NotificationsController {
   constructor(private notificationsService: NotificationsService) {}
   private readonly logger = new Logger(NotificationsController.name);
   @Post('portfolio')
-  sendPortfolioNotification(
+  async sendPortfolioNotification(
     @Body() req: NotificationPortfolio,
     @Res() res: Response,
   ) {
@@ -31,11 +31,14 @@ export class NotificationsController {
         });
       }
       const sendNorification =
-        this.notificationsService.sendPortfolioNotification(message);
+        await this.notificationsService.sendPortfolioNotification(message);
       this.logger.log(
         'Enviando respuesta de solicitud de notificación de portafolio',
       );
-      return res.status(200).json(sendNorification);
+      return res.status(200).json({
+        message: 'Notificación enviada exitosamente',
+        estado: sendNorification,
+      });
     } catch (error) {
       this.logger.error('Error al enviar la solicitud de notificación', error);
       return res.status(500).json({

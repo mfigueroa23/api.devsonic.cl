@@ -15,9 +15,9 @@ model property {
 
 model plantillas {
   id          Int    @id @default(autoincrement())
-  nombre      String
+  nombre      String @unique
   descripcion String
-  contenido   String @db.VarChar(5000)
+  contenido   String @db.VarChar(10000)
 }
 
 model user {

@@ -1,15 +1,74 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NotificationPortfolio } from '../types/notifications.types.js';
+import { AppService } from '../app.service.js';
+import {
+  TransactionalEmailsApi,
+  SendSmtpEmail,
+  TransactionalEmailsApiApiKeys,
+} from '@getbrevo/brevo';
+import { PrismaService } from '../prisma.service.js';
 
 @Injectable()
 export class NotificationsService {
+  constructor(
+    private appService: AppService,
+    private prisma: PrismaService,
+  ) {}
   private readonly logger = new Logger(NotificationsService.name);
-  sendPortfolioNotification(message: NotificationPortfolio) {
-    this.logger.log('Procesando notificación de portafolio');
-    return {
-      name: message.name,
-      email: message.email,
-      message: message.message,
-    };
+
+  private async getLayout(name: string) {
+    try {
+      this.logger.log(`Obteniendo plantilla: ${name}`);
+      const layout = await this.prisma.plantillas.findUnique({
+        select: { contenido: true, descripcion: true },
+        where: { nombre: name },
+      });
+      if (!layout) {
+        this.logger.warn(`Plantilla no encontrada: ${name}`);
+        throw new Error(`Plantilla no encontrada: ${name}`);
+      } else {
+        this.logger.log(
+          `Plantilla obtenida: ${name}; Desccripcion: ${layout.descripcion}`,
+        );
+        return atob(layout.contenido);
+      }
+    } catch (error) {
+      this.logger.error(`Error al obtener plantilla: ${name}`, error);
+      throw error;
+    }
+  }
+
+  async sendPortfolioNotification(message: NotificationPortfolio) {
+    try {
+      this.logger.log('Procesando notificación de portafolio');
+      let plantilla = await this.getLayout('Contact Devsonic Portfolio');
+      plantilla = plantilla.replace('{{name}}', message.name);
+      plantilla = plantilla.replace('{{email}}', message.email);
+      plantilla = plantilla.replace('{{message}}', message.message);
+      const brevoApiKey = await this.appService.getProperty('BREVO_APIKEY');
+      const brevoClient: TransactionalEmailsApi = new TransactionalEmailsApi();
+      brevoClient.setApiKey(
+        TransactionalEmailsApiApiKeys.apiKey,
+        brevoApiKey.value,
+      );
+      const email = new SendSmtpEmail();
+      email.sender = { name: 'DevSonic', email: 'no-reply@devsonic.cl' };
+      email.to = [{ email: 'mfigueroa@devsonic.cl' }];
+      email.subject = 'Contacto desde Portafolio';
+      email.htmlContent = plantilla;
+      await brevoClient
+        .sendTransacEmail(email)
+        .then((res) => {
+          this.logger.log(JSON.stringify(res.body));
+        })
+        .catch((error) => {
+          this.logger.error(error);
+          throw error;
+        });
+      return true;
+    } catch (error) {
+      this.logger.error('Error al procesar notificación de portafolio', error);
+      throw error;
+    }
   }
 }

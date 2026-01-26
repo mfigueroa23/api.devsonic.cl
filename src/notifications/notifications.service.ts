@@ -45,17 +45,20 @@ export class NotificationsService {
       plantilla = plantilla.replace('{{name}}', message.name);
       plantilla = plantilla.replace('{{email}}', message.email);
       plantilla = plantilla.replace('{{message}}', message.message);
+      this.logger.log('Configurando cliente de Brevo');
       const brevoApiKey = await this.appService.getProperty('BREVO_APIKEY');
       const brevoClient: TransactionalEmailsApi = new TransactionalEmailsApi();
       brevoClient.setApiKey(
         TransactionalEmailsApiApiKeys.apiKey,
         brevoApiKey.value,
       );
+      this.logger.log('Configurando correo electrónico');
       const email = new SendSmtpEmail();
       email.sender = { name: 'DevSonic', email: 'no-reply@devsonic.cl' };
       email.to = [{ email: 'mfigueroa@devsonic.cl' }];
       email.subject = 'Contacto desde Portafolio';
       email.htmlContent = plantilla;
+      this.logger.log('Enviando correo electrónico');
       await brevoClient
         .sendTransacEmail(email)
         .then((res) => {
@@ -65,6 +68,7 @@ export class NotificationsService {
           this.logger.error(error);
           throw error;
         });
+      this.logger.log('Correo electrónico enviado exitosamente');
       return true;
     } catch (error) {
       this.logger.error('Error al procesar notificación de portafolio', error);

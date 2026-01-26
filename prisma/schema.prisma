@@ -13,6 +13,13 @@ model property {
   value String
 }
 
+model plantillas {
+  id          Int    @id @default(autoincrement())
+  nombre      String
+  descripcion String
+  contenido   String @db.VarChar(5000)
+}
+
 model user {
   id       Int    @id @default(autoincrement())
   email    String @unique

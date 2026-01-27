@@ -13,6 +13,12 @@ model property {
   value String
 }
 
+model corsDomains {
+  id          Int     @id @default(autoincrement())
+  domain      String  @unique
+  habilitated Boolean
+}
+
 model plantillas {
   id          Int    @id @default(autoincrement())
   nombre      String @unique

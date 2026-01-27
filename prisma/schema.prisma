@@ -13,10 +13,10 @@ model property {
   value String
 }
 
-model corsDomains {
+model cors_domains {
   id          Int     @id @default(autoincrement())
   domain      String  @unique
-  habilitated Boolean
+  habilitated Boolean @default(false)
 }
 
 model plantillas {
@@ -34,11 +34,11 @@ model user {
   rut      Int    @unique
   rut_dv   Int
   password String @db.VarChar(3000)
-  role     Role   @default(USER)
+  role     role   @default(user)
 }
 
-enum Role {
-  USER
-  ADMIN
-  VET
+enum role {
+  user
+  admin
+  vet
 }

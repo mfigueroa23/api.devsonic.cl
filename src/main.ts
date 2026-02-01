@@ -3,7 +3,7 @@ import { AppModule } from './app.module.js';
 import { PrismaService } from './prisma.service.js';
 import { Logger } from '@nestjs/common';
 
-const logger = new Logger('APP_INITIALIZER');
+const logger = new Logger('InstanceLoader');
 const prisma = new PrismaService();
 
 async function bootstrap() {

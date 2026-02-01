@@ -19,14 +19,14 @@ model cors_domains {
   habilitated Boolean @default(false)
 }
 
-model plantillas {
+model layouts {
   id          Int    @id @default(autoincrement())
-  nombre      String @unique
-  descripcion String
-  contenido   String @db.VarChar(10000)
+  name        String @unique
+  description String
+  content     String @db.VarChar(10000)
 }
 
-model user {
+model users {
   id       Int    @id @default(autoincrement())
   email    String @unique
   name     String
@@ -34,10 +34,10 @@ model user {
   rut      Int    @unique
   rut_dv   Int
   password String @db.VarChar(3000)
-  role     role   @default(user)
+  role     Roles   @default(user)
 }
 
-enum role {
+enum Roles {
   user
   admin
   vet

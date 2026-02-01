@@ -10,7 +10,7 @@ export class UsersService {
     try {
       this.logger.log('Obteniendo lista de usuarios');
       const users: User[] = [];
-      const getUsers = await this.prisma.user.findMany();
+      const getUsers = await this.prisma.users.findMany();
       getUsers.map((user) => {
         users.push({
           name: user.name,

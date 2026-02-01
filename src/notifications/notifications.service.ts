@@ -19,18 +19,18 @@ export class NotificationsService {
   private async getLayout(name: string) {
     try {
       this.logger.log(`Obteniendo plantilla: ${name}`);
-      const layout = await this.prisma.plantillas.findUnique({
-        select: { contenido: true, descripcion: true },
-        where: { nombre: name },
+      const layout = await this.prisma.layouts.findUnique({
+        select: { content: true, description: true },
+        where: { name },
       });
       if (!layout) {
         this.logger.warn(`Plantilla no encontrada: ${name}`);
         throw new Error(`Plantilla no encontrada: ${name}`);
       } else {
         this.logger.log(
-          `Plantilla obtenida: ${name}; Desccripcion: ${layout.descripcion}`,
+          `Plantilla obtenida: ${name}; Descripcion: ${layout.description}`,
         );
-        return atob(layout.contenido);
+        return atob(layout.content);
       }
     } catch (error) {
       this.logger.error(`Error al obtener plantilla: ${name}`, error);

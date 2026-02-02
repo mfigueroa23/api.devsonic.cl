@@ -6,4 +6,5 @@ export type User = {
   rut: string;
   password?: string;
   role: string;
+  active?: boolean;
 };

@@ -27,14 +27,15 @@ model layouts {
 }
 
 model users {
-  id       Int    @id @default(autoincrement())
-  email    String @unique
+  id       Int      @id @default(autoincrement())
+  email    String   @unique
   name     String
   lastname String
-  rut      Int    @unique
+  rut      Int      @unique
   rut_dv   Int
-  password String @db.VarChar(3000)
-  role     Roles   @default(user)
+  password String   @db.VarChar(3000)
+  role     Roles    @default(user)
+  active   Boolean  @default(true)
 }
 
 enum Roles {

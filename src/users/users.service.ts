@@ -58,4 +58,30 @@ export class UsersService {
       await this.prisma.$disconnect();
     }
   }
+  async getUserByRut(rut_input: string): Promise<User> {
+    try {
+      await this.prisma.$connect();
+      this.logger.log(`Obteniendo usuario con el rut ${rut_input}`);
+      const [rut] = rut_input.split('-');
+      const user = await this.prisma.users.findUnique({
+        where: { rut: Number.parseInt(rut) },
+      });
+      if (!user) throw new Error('Usuario no existe');
+      return {
+        name: user.name,
+        lastname: user.lastname,
+        rut: `${user.rut}-${user.rut_dv}`,
+        email: user.email,
+        role: user.role,
+      };
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `Ha ocurrido un error al obtener el usuario. ${error.message}`,
+      );
+      throw error;
+    } finally {
+      await this.prisma.$disconnect();
+    }
+  }
 }

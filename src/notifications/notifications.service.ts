@@ -18,6 +18,7 @@ export class NotificationsService {
 
   private async getLayout(name: string) {
     try {
+      await this.prisma.$connect();
       this.logger.log(`Obteniendo plantilla: ${name}`);
       const layout = await this.prisma.layouts.findUnique({
         select: { content: true, description: true },
@@ -32,9 +33,12 @@ export class NotificationsService {
         );
         return atob(layout.content);
       }
-    } catch (error) {
-      this.logger.error(`Error al obtener plantilla: ${name}`, error);
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(`Error al obtener plantilla: ${name}`, error.message);
       throw error;
+    } finally {
+      await this.prisma.$disconnect();
     }
   }
 
@@ -70,8 +74,12 @@ export class NotificationsService {
         });
       this.logger.log('Correo electrónico enviado exitosamente');
       return true;
-    } catch (error) {
-      this.logger.error('Error al procesar notificación de portafolio', error);
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        'Error al procesar notificación de portafolio',
+        error.message,
+      );
       throw error;
     }
   }

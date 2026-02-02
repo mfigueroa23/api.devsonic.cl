@@ -8,6 +8,7 @@ export class UsersService {
   private readonly logger = new Logger(UsersService.name);
   async getAllUsers(): Promise<User[]> {
     try {
+      await this.prisma.$connect();
       this.logger.log('Obteniendo lista de usuarios');
       const users: User[] = [];
       const getUsers = await this.prisma.users.findMany();
@@ -21,9 +22,40 @@ export class UsersService {
         });
       });
       return users;
-    } catch (error) {
-      this.logger.error('Ha ocurrido un error al obtener los usuarios');
-      throw new Error(error as string);
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        'Ha ocurrido un error al obtener los usuarios',
+        error.message,
+      );
+      throw error;
+    } finally {
+      await this.prisma.$disconnect();
+    }
+  }
+  async getUserByEmail(email: string): Promise<User> {
+    try {
+      await this.prisma.$connect();
+      this.logger.log(`Obteniendo usuario con el email ${email}`);
+      const user = await this.prisma.users.findUnique({
+        where: { email },
+      });
+      if (!user) throw new Error('Usuario no existe');
+      return {
+        name: user.name,
+        lastname: user.lastname,
+        rut: `${user.rut}-${user.rut_dv}`,
+        email: user.email,
+        role: user.role,
+      };
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `Ha ocurrido un error al obtener el usuario. ${error.message}`,
+      );
+      throw error;
+    } finally {
+      await this.prisma.$disconnect();
     }
   }
 }

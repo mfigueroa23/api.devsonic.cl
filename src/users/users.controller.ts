@@ -27,11 +27,24 @@ export class UsersController {
     }
   }
   @Get('getUser')
-  async getUser(@Query('email') email: string, @Res() res: Response) {
+  async getUser(
+    @Query('email') email: string,
+    @Query('rut') rut: string,
+    @Res() res: Response,
+  ) {
     try {
-      if (email) {
-        this.logger.log(`Solicitando usuarios con el email ${email}`);
+      if (email && rut) {
+        this.logger.warn('Debe especificar solo un criterio de busqueda');
+        res.status(500).json({
+          message: 'Debe especificar solo un criterio de busqueda',
+        });
+      } else if (email) {
+        this.logger.log(`Solicitando usuario con el email ${email}`);
         const user = await this.userService.getUserByEmail(email);
+        res.status(200).json(user);
+      } else if (rut) {
+        this.logger.log(`Solicitando usuario con el rut ${rut}`);
+        const user = await this.userService.getUserByRut(rut);
         res.status(200).json(user);
       } else {
         this.logger.warn('No se ha especificado un criterio de busqueda');

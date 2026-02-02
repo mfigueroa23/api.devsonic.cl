@@ -35,7 +35,9 @@ export class NotificationsService {
       }
     } catch (err) {
       const error = new Error(err as string);
-      this.logger.error(`Error al obtener plantilla: ${name}`, error.message);
+      this.logger.error(
+        `Error al obtener plantilla: ${name}. ${error.message}`,
+      );
       throw error;
     } finally {
       await this.prisma.$disconnect();
@@ -77,8 +79,7 @@ export class NotificationsService {
     } catch (err) {
       const error = new Error(err as string);
       this.logger.error(
-        'Error al procesar notificación de portafolio',
-        error.message,
+        `Error al procesar notificación de portafolio ${error.message}`,
       );
       throw error;
     }

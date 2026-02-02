@@ -11,7 +11,9 @@ export class UsersService {
       await this.prisma.$connect();
       this.logger.log('Obteniendo lista de usuarios');
       const users: User[] = [];
-      const getUsers = await this.prisma.users.findMany();
+      const getUsers = await this.prisma.users.findMany({
+        where: { active: true },
+      });
       getUsers.map((user) => {
         users.push({
           name: user.name,
@@ -38,7 +40,7 @@ export class UsersService {
       await this.prisma.$connect();
       this.logger.log(`Obteniendo usuario con el email ${email}`);
       const user = await this.prisma.users.findUnique({
-        where: { email },
+        where: { email, active: true },
       });
       if (!user) throw new Error('Usuario no existe');
       return {
@@ -64,7 +66,7 @@ export class UsersService {
       this.logger.log(`Obteniendo usuario con el rut ${rut_input}`);
       const [rut] = rut_input.split('-');
       const user = await this.prisma.users.findUnique({
-        where: { rut: Number.parseInt(rut) },
+        where: { rut: Number.parseInt(rut), active: true },
       });
       if (!user) throw new Error('Usuario no existe');
       return {

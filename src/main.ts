@@ -27,7 +27,7 @@ async function bootstrap() {
     await prisma.$disconnect();
     await app.listen(process.env.PORT ?? 3000);
   } else {
-    logger.warn('No se han encontrado dominios para habiliar');
+    logger.warn('No se han encontrado dominios para habilitar');
     app.enableCors({
       origin: ['https://devsonic.cl'],
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',

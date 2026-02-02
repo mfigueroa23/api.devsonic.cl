@@ -23,8 +23,7 @@ export class AppService {
       await this.prisma.$disconnect();
       const error = new Error(err as string);
       this.logger.error(
-        'Ha ocurrido un error al obtener la propiedad',
-        error.message,
+        `Ha ocurrido un error al obtener la propiedad ${error.message}`,
       );
       throw error;
     } finally {

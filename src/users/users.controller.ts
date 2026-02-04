@@ -1,4 +1,12 @@
-import { Controller, Get, Logger, Query, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Logger,
+  Post,
+  Query,
+  Res,
+} from '@nestjs/common';
 import type { Response } from 'express';
 import { UsersService } from './users.service.js';
 import type { User } from '../types/users.type.js';
@@ -35,7 +43,7 @@ export class UsersController {
     try {
       if (email && rut) {
         this.logger.warn('Debe especificar solo un criterio de busqueda');
-        res.status(500).json({
+        res.status(400).json({
           message: 'Debe especificar solo un criterio de busqueda',
         });
       } else if (email) {
@@ -48,7 +56,7 @@ export class UsersController {
         res.status(200).json(user);
       } else {
         this.logger.warn('No se ha especificado un criterio de busqueda');
-        res.status(500).json({
+        res.status(400).json({
           message: 'No se ha especificado un criterio de busqueda',
         });
       }
@@ -59,6 +67,30 @@ export class UsersController {
       if (String(error).includes('no existe')) {
         res.status(200).json({
           message: 'El usuario no existe',
+        });
+      } else {
+        res.status(500).json({
+          message: 'No es posible procesar la solicitud',
+        });
+      }
+    }
+  }
+  @Post('create')
+  async createUser(@Body() user: User, @Res() res: Response) {
+    try {
+      this.logger.log(
+        `Solicitando la creacion del usuario ${user.name} ${user.lastname} con rut ${user.rut}`,
+      );
+      const create = await this.userService.createUser(user);
+      res.status(201).json(create);
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `Ha ocurrido un error al procesar la solicitud ${error}`,
+      );
+      if (error.message.includes('Usuario ya existe')) {
+        res.status(400).json({
+          message: 'Usuario ya existe',
         });
       } else {
         res.status(500).json({

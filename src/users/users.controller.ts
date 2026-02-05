@@ -143,4 +143,69 @@ export class UsersController {
       });
     }
   }
+  @Patch('active')
+  async updateStatusUser(
+    @Query('email') email: string,
+    @Query('rut') rut: string,
+    @Query('status') status: string,
+    @Res() res: Response,
+  ) {
+    try {
+      this.logger.log('Solicitando actualizar estado del usuario');
+      if (email && rut) {
+        this.logger.warn(
+          'No es posible actualizar con ambos criterior de busqueda',
+        );
+        res.status(400).json({
+          message: 'No es posible actualizar con ambos criterior de busqueda',
+        });
+      } else if (email) {
+        if (status.includes('true')) {
+          const userStatus = await this.userService.updateUserByEmail(email, {
+            active: true,
+          });
+          res.status(200).json({
+            message: 'Actualziacion realizada con exito',
+            userStatus,
+          });
+        } else {
+          const userStatus = await this.userService.updateUserByEmail(email, {
+            active: false,
+          });
+          res.status(200).json({
+            message: 'Actualziacion realizada con exito',
+            userStatus,
+          });
+        }
+      } else if (rut) {
+        const userStatus = await this.userService.updateUserByRut(rut, {
+          active: status.includes('true') ? true : false,
+        });
+        res.status(200).json({
+          message: 'Actualziacion realizada con exito',
+          userStatus,
+        });
+      } else {
+        this.logger.warn('No se han especificado criterio de actualizacion');
+        res.status(400).json({
+          message: 'No se han especificado criterio de actualizacion',
+        });
+      }
+    } catch (err) {
+      const error = new Error(err as string);
+      if (!error.message.includes('desactivado')) {
+        this.logger.error(
+          `Ha ocurrido un error al procesar la solicitud ${error}`,
+        );
+        res.status(500).json({
+          message: 'No es posible procesar la solicitud',
+        });
+      } else {
+        this.logger.log('El usuario ha sido desactivado');
+        res.status(200).json({
+          message: 'Usuario desactivado',
+        });
+      }
+    }
+  }
 }

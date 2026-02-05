@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Logger,
+  Patch,
   Post,
   Query,
   Res,
@@ -97,6 +98,49 @@ export class UsersController {
           message: 'No es posible procesar la solicitud',
         });
       }
+    }
+  }
+  @Patch('update')
+  async updateUser(
+    @Body() user: User,
+    @Query('email') email: string,
+    @Query('rut') rut: string,
+    @Res() res: Response,
+  ) {
+    try {
+      this.logger.log('Solicitando actualizancion de Usuario');
+      if (user.rut || user.email) {
+        this.logger.warn('No es posible actualizar rut o email');
+        res.status(400).json({
+          message: 'No es posible actualizar rut o email',
+        });
+      }
+      if (email && rut) {
+        this.logger.warn(
+          'No es posible actualizar con ambos criterior de busqueda',
+        );
+        res.status(400).json({
+          message: 'No es posible actualizar con ambos criterior de busqueda',
+        });
+      } else if (email) {
+        const update = await this.userService.updateUserByEmail(email, user);
+        res.status(200).json(update);
+      } else if (rut) {
+        const update = await this.userService.updateUserByRut(rut, user);
+        res.status(200).json(update);
+      } else {
+        this.logger.warn('No se han especificado criterio de actualizacion');
+        res.status(400).json({
+          message: 'No se han especificado criterio de actualizacion',
+        });
+      }
+    } catch (error) {
+      this.logger.error(
+        `Ha ocurrido un error al procesar la solicitud ${error}`,
+      );
+      res.status(500).json({
+        message: 'No es posible procesar la solicitud',
+      });
     }
   }
 }

@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma.service.js';
 import type { User } from '../types/users.type.js';
 import { CryptoUtil } from '../utils/crypto.util.js';
 import { AppService } from '../app.service.js';
+import { Roles } from 'generated/prisma/enums.js';
 
 @Injectable()
 export class UsersService {
@@ -100,6 +101,9 @@ export class UsersService {
     try {
       this.logger.log('Procesando la creacion de usuario');
       await this.prisma.$connect();
+      if (!user.name || !user.lastname || !user.email || !user.rut) {
+        throw new Error('Faltan datos para completar la solicitud');
+      }
       const [rut, rut_dv] = user.rut.split('-');
       const cryptoSecret = await this.appService.getProperty('CRYPTO_SECRET');
       const cryptoSalt = await this.appService.getProperty('CRYPTO_SALT');
@@ -141,6 +145,213 @@ export class UsersService {
       } else {
         throw error;
       }
+    } finally {
+      await this.prisma.$disconnect();
+    }
+  }
+  async updateUserByEmail(email: string, userData: User) {
+    try {
+      this.logger.log(`Actualizando usuario con el email ${email}`);
+      await this.prisma.$connect();
+      let user = await this.prisma.users.findUnique({
+        select: {
+          name: true,
+          lastname: true,
+          password: true,
+          role: true,
+          active: true,
+        },
+        where: { email },
+      });
+      if (!user) throw new Error('El usuario no existe');
+      if (userData.name) {
+        this.logger.log('Actualizando nombre del usuario');
+        user = {
+          name: String(userData.name),
+          lastname: user.lastname,
+          password: user.password,
+          role: user.role,
+          active: user.active,
+        };
+        await this.prisma.users.update({
+          data: user,
+          where: { email },
+        });
+      }
+      if (userData.lastname) {
+        this.logger.log('Actualizando apellido del usuario');
+        user = {
+          name: user.name,
+          lastname: String(userData.lastname),
+          password: user.password,
+          role: user.role,
+          active: user.active,
+        };
+        await this.prisma.users.update({
+          data: user,
+          where: { email },
+        });
+      }
+      if (userData.password) {
+        this.logger.log('Actualizando contraseña del usuario');
+        const CRYPTO_SECRET =
+          await this.appService.getProperty('CRYPTO_SECRET');
+        const CRYPTO_SALT = await this.appService.getProperty('CRYPTO_SALT');
+        user = {
+          name: user.name,
+          lastname: user.lastname,
+          password: this.cryptoUtil.encrypt(
+            String(userData.password),
+            CRYPTO_SECRET.value,
+            CRYPTO_SALT.value,
+          ),
+          role: user.role,
+          active: user.active,
+        };
+        await this.prisma.users.update({
+          data: user,
+          where: { email },
+        });
+      }
+      if (userData.role) {
+        this.logger.log('Actualizando rol del usuario');
+        user = {
+          name: user.name,
+          lastname: user.lastname,
+          password: user.password,
+          role: String(userData.role) as Roles,
+          active: user.active,
+        };
+        await this.prisma.users.update({
+          data: user,
+          where: { email },
+        });
+      }
+      if (userData.active) {
+        this.logger.log('Actualizando estado del usuario');
+        user = {
+          name: user.name,
+          lastname: user.lastname,
+          password: user.password,
+          role: user.role,
+          active: userData.active,
+        };
+        await this.prisma.users.update({
+          data: user,
+          where: { email },
+        });
+      }
+      return await this.getUserByEmail(email);
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `Ha ocurrido un error al procesar la actualizacion ${error.message}`,
+      );
+      throw error;
+    } finally {
+      await this.prisma.$disconnect();
+    }
+  }
+  async updateUserByRut(rutData: string, userData: User) {
+    try {
+      this.logger.log(`Actualizando usuario con el rut ${rutData}`);
+      const [rut, rut_dv] = rutData.split('-');
+      await this.prisma.$connect();
+      let user = await this.prisma.users.findUnique({
+        select: {
+          name: true,
+          lastname: true,
+          password: true,
+          role: true,
+          active: true,
+        },
+        where: { rut: Number.parseInt(rut), rut_dv: Number.parseInt(rut_dv) },
+      });
+      if (!user) throw new Error('El usuario no existe');
+      if (userData.name) {
+        this.logger.log('Actualizando nombre del usuario');
+        user = {
+          name: String(userData.name),
+          lastname: user.lastname,
+          password: user.password,
+          role: user.role,
+          active: user.active,
+        };
+        await this.prisma.users.update({
+          data: user,
+          where: { rut: Number.parseInt(rut), rut_dv: Number.parseInt(rut_dv) },
+        });
+      }
+      if (userData.lastname) {
+        this.logger.log('Actualizando apellido del usuario');
+        user = {
+          name: user.name,
+          lastname: String(userData.lastname),
+          password: user.password,
+          role: user.role,
+          active: user.active,
+        };
+        await this.prisma.users.update({
+          data: user,
+          where: { rut: Number.parseInt(rut), rut_dv: Number.parseInt(rut_dv) },
+        });
+      }
+      if (userData.password) {
+        this.logger.log('Actualizando contraseña del usuario');
+        const CRYPTO_SECRET =
+          await this.appService.getProperty('CRYPTO_SECRET');
+        const CRYPTO_SALT = await this.appService.getProperty('CRYPTO_SALT');
+        user = {
+          name: user.name,
+          lastname: user.lastname,
+          password: this.cryptoUtil.encrypt(
+            String(userData.password),
+            CRYPTO_SECRET.value,
+            CRYPTO_SALT.value,
+          ),
+          role: user.role,
+          active: user.active,
+        };
+        await this.prisma.users.update({
+          data: user,
+          where: { rut: Number.parseInt(rut), rut_dv: Number.parseInt(rut_dv) },
+        });
+      }
+      if (userData.role) {
+        this.logger.log('Actualizando rol del usuario');
+        user = {
+          name: user.name,
+          lastname: user.lastname,
+          password: user.password,
+          role: String(userData.role) as Roles,
+          active: user.active,
+        };
+        await this.prisma.users.update({
+          data: user,
+          where: { rut: Number.parseInt(rut), rut_dv: Number.parseInt(rut_dv) },
+        });
+      }
+      if (userData.active) {
+        this.logger.log('Actualizando estado del usuario');
+        user = {
+          name: user.name,
+          lastname: user.lastname,
+          password: user.password,
+          role: user.role,
+          active: userData.active,
+        };
+        await this.prisma.users.update({
+          data: user,
+          where: { rut: Number.parseInt(rut), rut_dv: Number.parseInt(rut_dv) },
+        });
+      }
+      return await this.getUserByRut(`${rut}-${rut_dv}`);
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `Ha ocurrido un error al procesar la actualizacion ${error.message}`,
+      );
+      throw error;
     } finally {
       await this.prisma.$disconnect();
     }

@@ -173,7 +173,7 @@ export class UsersController {
             active: false,
           });
           res.status(200).json({
-            message: 'Actualziacion realizada con exito',
+            message: 'Actualizacion realizada con exito',
             userStatus,
           });
         }
@@ -182,7 +182,7 @@ export class UsersController {
           active: status.includes('true') ? true : false,
         });
         res.status(200).json({
-          message: 'Actualziacion realizada con exito',
+          message: 'Actualizacion realizada con exito',
           userStatus,
         });
       } else {

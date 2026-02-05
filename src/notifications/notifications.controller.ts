@@ -40,7 +40,9 @@ export class NotificationsController {
         estado: sendNorification,
       });
     } catch (error) {
-      this.logger.error('Error al enviar la solicitud de notificación', error);
+      this.logger.error(
+        `Error al enviar la solicitud de notificación ${error}`,
+      );
       return res.status(500).json({
         message: 'Error al enviar la solicitud de notificación',
       });

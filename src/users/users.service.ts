@@ -227,7 +227,7 @@ export class UsersService {
           where: { email },
         });
       }
-      if (userData.active) {
+      if (userData.active == true || userData.active == false) {
         this.logger.log('Actualizando estado del usuario');
         user = {
           name: user.name,
@@ -236,10 +236,16 @@ export class UsersService {
           role: user.role,
           active: userData.active,
         };
-        await this.prisma.users.update({
-          data: user,
-          where: { email },
-        });
+        await this.prisma.users
+          .update({
+            data: user,
+            where: { email },
+          })
+          .then((user) => {
+            if (!user.active) {
+              throw new Error('desactivado');
+            }
+          });
       }
       return await this.getUserByEmail(email);
     } catch (err) {
@@ -331,7 +337,7 @@ export class UsersService {
           where: { rut: Number.parseInt(rut), rut_dv: Number.parseInt(rut_dv) },
         });
       }
-      if (userData.active) {
+      if (userData.active == true || userData.active == false) {
         this.logger.log('Actualizando estado del usuario');
         user = {
           name: user.name,
@@ -340,12 +346,21 @@ export class UsersService {
           role: user.role,
           active: userData.active,
         };
-        await this.prisma.users.update({
-          data: user,
-          where: { rut: Number.parseInt(rut), rut_dv: Number.parseInt(rut_dv) },
-        });
+        await this.prisma.users
+          .update({
+            data: user,
+            where: {
+              rut: Number.parseInt(rut),
+              rut_dv: Number.parseInt(rut_dv),
+            },
+          })
+          .then((user) => {
+            if (!user.active) {
+              throw new Error('desactivado');
+            }
+          });
       }
-      return await this.getUserByRut(`${rut}-${rut_dv}`);
+      return await this.getUserByRut(rutData);
     } catch (err) {
       const error = new Error(err as string);
       this.logger.error(

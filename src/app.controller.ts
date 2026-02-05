@@ -20,11 +20,11 @@ export class AppController {
         serviceStatus: properties[1].value,
       });
     } catch (error) {
-      this.logger.error('Error al obtener el estado del servicio', error);
+      this.logger.error(`Error al obtener el estado del servicio ${error}`);
       res.status(500).json({
         serviceName: 'unknown',
         serviceStatus: 'unknown',
-        error: `${error.message}`,
+        error: `${error}`,
       });
     }
   }

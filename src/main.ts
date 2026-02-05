@@ -3,7 +3,7 @@ import { AppModule } from './app.module.js';
 import { PrismaService } from './prisma.service.js';
 import { Logger } from '@nestjs/common';
 
-const logger = new Logger('APP_INITIALIZER');
+const logger = new Logger('InstanceLoader');
 const prisma = new PrismaService();
 
 async function bootstrap() {
@@ -27,7 +27,7 @@ async function bootstrap() {
     await prisma.$disconnect();
     await app.listen(process.env.PORT ?? 3000);
   } else {
-    logger.warn('No se han encontrado dominios para habiliar');
+    logger.warn('No se han encontrado dominios para habilitar');
     app.enableCors({
       origin: ['https://devsonic.cl'],
       methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',

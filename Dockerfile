@@ -1,4 +1,4 @@
-FROM node:22.20.0-slim
+FROM node:24.13.1-slim
 WORKDIR /api.devsonic.cl
 COPY ./entrypoint.sh /api.devsonic.cl/entrypoint.sh
 COPY ./.env /api.devsonic.cl/dist/

@@ -12,10 +12,10 @@ jobs:
       - name: "Getting source code"
         uses: actions/checkout@v5
 
-      - name: "Installing Node.JS v22.20"
+      - name: "Installing Node.JS v24.13.1"
         uses: actions/setup-node@v4
         with:
-          node-version: "22.20"
+          node-version: "24.13.1"
 
       - name: "Installing project dependencies"
         run: npm i

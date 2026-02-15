@@ -149,7 +149,7 @@ export class UsersService {
       await this.prisma.$disconnect();
     }
   }
-  async updateUserByEmail(email: string, userData: User) {
+  async updateUserByEmail(email: string, userData: User): Promise<User> {
     try {
       this.logger.log(`Actualizando usuario con el email ${email}`);
       await this.prisma.$connect();
@@ -258,7 +258,7 @@ export class UsersService {
       await this.prisma.$disconnect();
     }
   }
-  async updateUserByRut(rutData: string, userData: User) {
+  async updateUserByRut(rutData: string, userData: User): Promise<User> {
     try {
       this.logger.log(`Actualizando usuario con el rut ${rutData}`);
       const [rut, rut_dv] = rutData.split('-');
@@ -365,6 +365,31 @@ export class UsersService {
       const error = new Error(err as string);
       this.logger.error(
         `Ha ocurrido un error al procesar la actualizacion ${error.message}`,
+      );
+      throw error;
+    } finally {
+      await this.prisma.$disconnect();
+    }
+  }
+  async getUserPasswd(email: string): Promise<string> {
+    try {
+      this.logger.log(`Obteniendo contraseña del usuario ${email}`);
+      const userPass = await this.prisma.users.findUnique({
+        select: { password: true },
+        where: { email },
+      });
+      if (!userPass?.password) {
+        this.logger.warn(
+          `No es posible encontrar usuario con el email ${email}`,
+        );
+        throw new Error('Usuario no existe');
+      } else {
+        return userPass.password;
+      }
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `Ha ocurrido un error al procesar la obtencion de credenciales ${error.message}`,
       );
       throw error;
     } finally {

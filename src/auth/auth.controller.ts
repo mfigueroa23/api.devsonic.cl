@@ -1,6 +1,6 @@
-import { Body, Controller, Logger, Post, Res } from '@nestjs/common';
+import { Body, Controller, Headers, Logger, Post, Res } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
-import type { Response } from 'express';
+import type { Response, Request } from 'express';
 import type { AuthBody } from '../types/auth.types.js';
 import { JwtUtility } from '../utils/jwt.util.js';
 import { UsersService } from '../users/users.service.js';
@@ -54,6 +54,30 @@ export class AuthController {
           message: 'Ha ocurrido un error al procesar la solicitud',
         });
       }
+    }
+  }
+  @Post('verify')
+  async authVerify(
+    @Headers('X-API-TOKEN') token: string,
+    @Res() res: Response,
+  ) {
+    try {
+      this.logger.log('Solicitando verificar token');
+      if (!token) {
+        res.status(400).json({
+          message: 'Debe proporcionar un token',
+        });
+      }
+      const status = await this.jwtUtility.verifyToken(token);
+      res.status(200).json({ status });
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `Ha ocurrido un error en la solicitud ${error.message}`,
+      );
+      res.status(500).json({
+        message: 'Ha ocurrido un error al procesar la solicitud',
+      });
     }
   }
 }

@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import { AppService } from '../app.service.js';
 import type { SessionToken } from '../types/jwt.types.js';
 
@@ -24,6 +24,29 @@ export class JwtUtility {
       const error = new Error(err as string);
       this.logger.error(
         `Ha ocurrido un error al generar el token ${error.message}`,
+      );
+      throw err;
+    }
+  }
+  async verifyToken(token: string) {
+    try {
+      this.logger.log('Verificando validez del token');
+      const secret = await this.appService.getProperty('JWT_SECRET');
+      return jwt.verify(token, secret.value, (err, data) => {
+        if (err) {
+          this.logger.warn('Token invalido o expirado');
+          return false;
+        } else if (data) {
+          this.logger.log(
+            `Token valido. Usuario: ${(data as JwtPayload).email}, Perfil: ${(data as JwtPayload).profile}`,
+          );
+          return true;
+        }
+      });
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `Ha ocurrido un error al verificar el token ${error.message}`,
       );
       throw err;
     }

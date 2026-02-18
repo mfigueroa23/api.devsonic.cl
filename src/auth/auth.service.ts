@@ -38,7 +38,7 @@ export class AuthService {
       this.logger.error(
         `Ha ocurrido un error al procesar la solicitud ${error.message}`,
       );
-      throw error;
+      throw err;
     }
   }
 }

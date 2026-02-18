@@ -37,7 +37,7 @@ export class UsersService {
         'Ha ocurrido un error al obtener los usuarios',
         error.message,
       );
-      throw error;
+      throw err;
     } finally {
       await this.prisma.$disconnect();
     }
@@ -62,7 +62,7 @@ export class UsersService {
       this.logger.error(
         `Ha ocurrido un error al obtener el usuario. ${error.message}`,
       );
-      throw error;
+      throw err;
     } finally {
       await this.prisma.$disconnect();
     }
@@ -92,7 +92,7 @@ export class UsersService {
       this.logger.error(
         `Ha ocurrido un error al obtener el usuario. ${error.message}`,
       );
-      throw error;
+      throw err;
     } finally {
       await this.prisma.$disconnect();
     }
@@ -143,7 +143,7 @@ export class UsersService {
       if (error.message.includes('Unique constraint')) {
         throw new Error('Usuario ya existe');
       } else {
-        throw error;
+        throw err;
       }
     } finally {
       await this.prisma.$disconnect();
@@ -253,7 +253,7 @@ export class UsersService {
       this.logger.error(
         `Ha ocurrido un error al procesar la actualizacion ${error.message}`,
       );
-      throw error;
+      throw err;
     } finally {
       await this.prisma.$disconnect();
     }
@@ -366,7 +366,7 @@ export class UsersService {
       this.logger.error(
         `Ha ocurrido un error al procesar la actualizacion ${error.message}`,
       );
-      throw error;
+      throw err;
     } finally {
       await this.prisma.$disconnect();
     }
@@ -391,7 +391,7 @@ export class UsersService {
       this.logger.error(
         `Ha ocurrido un error al procesar la obtencion de credenciales ${error.message}`,
       );
-      throw error;
+      throw err;
     } finally {
       await this.prisma.$disconnect();
     }

@@ -5,9 +5,17 @@ import { UsersService } from '../users/users.service.js';
 import { CryptoUtil } from '../utils/crypto.util.js';
 import { AppService } from '../app.service.js';
 import { PrismaService } from '../prisma.service.js';
+import { JwtUtility } from '../utils/jwt.util.js';
 
 @Module({
   controllers: [AuthController],
-  providers: [AuthService, UsersService, CryptoUtil, AppService, PrismaService],
+  providers: [
+    AuthService,
+    UsersService,
+    CryptoUtil,
+    AppService,
+    PrismaService,
+    JwtUtility,
+  ],
 })
 export class AuthModule {}

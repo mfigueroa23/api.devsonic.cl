@@ -1,11 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { NotificationPortfolio } from '../types/notifications.types.js';
 import { AppService } from '../app.service.js';
-import {
-  TransactionalEmailsApi,
-  SendSmtpEmail,
-  TransactionalEmailsApiApiKeys,
-} from '@getbrevo/brevo';
+import { BrevoClient } from '@getbrevo/brevo';
 import { PrismaService } from '../prisma.service.js';
 
 @Injectable()
@@ -53,28 +49,17 @@ export class NotificationsService {
       plantilla = plantilla.replace('{{message}}', message.message);
       this.logger.log('Configurando cliente de Brevo');
       const brevoApiKey = await this.appService.getProperty('BREVO_APIKEY');
-      const brevoClient: TransactionalEmailsApi = new TransactionalEmailsApi();
-      brevoClient.setApiKey(
-        TransactionalEmailsApiApiKeys.apiKey,
-        brevoApiKey.value,
-      );
+      const brevo = new BrevoClient({ apiKey: brevoApiKey.value });
       this.logger.log('Configurando correo electrónico');
-      const email = new SendSmtpEmail();
-      email.sender = { name: 'DevSonic', email: 'no-reply@devsonic.cl' };
-      email.to = [{ email: 'mfigueroa@devsonic.cl' }];
-      email.subject = 'Contacto desde Portafolio';
-      email.htmlContent = plantilla;
-      this.logger.log('Enviando correo electrónico');
-      await brevoClient
-        .sendTransacEmail(email)
-        .then((res) => {
-          this.logger.log(JSON.stringify(res.body));
-        })
-        .catch((error) => {
-          this.logger.error(error);
-          throw error;
-        });
-      this.logger.log('Correo electrónico enviado exitosamente');
+      const sentEmail = await brevo.transactionalEmails.sendTransacEmail({
+        sender: { name: 'DevSonic', email: 'no-reply@devsonic.cl' },
+        to: [{ email: 'mfigueroa@devsonic.cl' }],
+        subject: 'Contacto desde Portafolio',
+        htmlContent: plantilla,
+      });
+      this.logger.log(
+        `Enviando correo electrónico, ID: ${sentEmail.messageId}`,
+      );
       return true;
     } catch (err) {
       const error = new Error(err as string);

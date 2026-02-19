@@ -28,20 +28,22 @@ export class JwtUtility {
       throw err;
     }
   }
-  async verifyToken(token: string) {
+  async verifyToken(token: string): Promise<boolean> {
     try {
       this.logger.log('Verificando validez del token');
       const secret = await this.appService.getProperty('JWT_SECRET');
-      return jwt.verify(token, secret.value, (err, data) => {
-        if (err) {
-          this.logger.warn('Token invalido o expirado');
-          return false;
-        } else if (data) {
-          this.logger.log(
-            `Token valido. Usuario: ${(data as JwtPayload).email}, Perfil: ${(data as JwtPayload).profile}`,
-          );
-          return true;
-        }
+      return new Promise((resolve) => {
+        jwt.verify(token, secret.value, (err, data) => {
+          if (err) {
+            this.logger.warn('Token invalido o expirado');
+            resolve(false);
+          } else if (data) {
+            this.logger.log(
+              `Token valido. Usuario: ${(data as JwtPayload).email}, Perfil: ${(data as JwtPayload).profile}`,
+            );
+            resolve(true);
+          }
+        });
       });
     } catch (err) {
       const error = new Error(err as string);

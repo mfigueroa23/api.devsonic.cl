@@ -7,16 +7,19 @@ import {
   Post,
   Query,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { UsersService } from './users.service.js';
 import type { User } from '../types/users.type.js';
+import { AuthGuard } from '../guards/auth/auth.guard.js';
 
 @Controller('users')
 export class UsersController {
   constructor(private userService: UsersService) {}
   private readonly logger = new Logger(UsersController.name);
   @Get('getAll')
+  @UseGuards(AuthGuard)
   async getAllUsers(@Res() res: Response) {
     try {
       this.logger.log('Solicitando lista de todos los usuarios');
@@ -36,6 +39,7 @@ export class UsersController {
     }
   }
   @Get('getUser')
+  @UseGuards(AuthGuard)
   async getUser(
     @Query('email') email: string,
     @Query('rut') rut: string,
@@ -101,6 +105,7 @@ export class UsersController {
     }
   }
   @Patch('update')
+  @UseGuards(AuthGuard)
   async updateUser(
     @Body() user: User,
     @Query('email') email: string,
@@ -144,6 +149,7 @@ export class UsersController {
     }
   }
   @Patch('active')
+  @UseGuards(AuthGuard)
   async updateStatusUser(
     @Query('email') email: string,
     @Query('rut') rut: string,

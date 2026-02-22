@@ -36,6 +36,33 @@ model users {
   password String   @db.VarChar(3000)
   role     Roles    @default(user)
   active   Boolean  @default(true)
+  pets     pets[]
+}
+
+model pets {
+  id          Int      @id @default(autoincrement())
+  name        String
+  specie      String
+  born_year   Int
+  born_month  BornMonth
+  age         String
+  owner_id    Int
+  owner       users   @relation(fields: [owner_id], references: [id])
+}
+
+enum BornMonth {
+  Enero
+  Febrero
+  Marzo
+  Abril
+  Mayo
+  Junio
+  Julio
+  Agosto
+  Septiembre
+  Octubre
+  Noviembre
+  Diciembre
 }
 
 enum Roles {

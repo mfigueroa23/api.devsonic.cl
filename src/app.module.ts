@@ -5,9 +5,10 @@ import { PrismaService } from './prisma.service.js';
 import { NotificationsModule } from './notifications/notifications.module.js';
 import { UsersModule } from './users/users.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { PetsModule } from './pets/pets.module.js';
 @Module({
   controllers: [AppController],
   providers: [AppService, PrismaService],
-  imports: [NotificationsModule, UsersModule, AuthModule],
+  imports: [NotificationsModule, UsersModule, AuthModule, PetsModule],
 })
 export class AppModule {}

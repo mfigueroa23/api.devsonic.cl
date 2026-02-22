@@ -40,14 +40,30 @@ model users {
 }
 
 model pets {
-  id          Int      @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   name        String
-  specie      String
   born_year   Int
   born_month  BornMonth
   age         String
+  weight      Float       @default(0)
+  weight_unit WeightUnit  @default(kg)
+  desease     Boolean     @default(false)
   owner_id    Int
-  owner       users   @relation(fields: [owner_id], references: [id])
+  specie_id   Int
+  breed       String
+  owner       users       @relation(fields: [owner_id], references: [id])
+  specie      pet_specie  @relation(fields: [specie_id], references: [id])
+}
+
+model pet_specie {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  pets  pets[]
+}
+
+enum WeightUnit {
+  kg
+  g
 }
 
 enum BornMonth {

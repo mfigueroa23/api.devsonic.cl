@@ -27,43 +27,168 @@ model layouts {
 }
 
 model users {
-  id       Int      @id @default(autoincrement())
-  email    String   @unique
-  name     String
-  lastname String
-  rut      Int      @unique
-  rut_dv   Int
-  password String   @db.VarChar(3000)
-  role     Roles    @default(user)
-  active   Boolean  @default(true)
-  pets     pets[]
+  id            Int             @id @default(autoincrement())
+  email         String          @unique
+  name          String
+  lastname      String
+  rut           Int             @unique
+  rut_dv        Int
+  password      String          @db.VarChar(3000)
+  active        Boolean         @default(true)
+  pets          pets[]
+  users_roles   users_roles[]
+  recipes       recipes[]
+  notes         user_notes[]
+  reminders     user_reminders[]
+}
+
+model roles {
+  id          Int             @id @default(autoincrement())
+  name        String          @unique
+  user_roles  users_roles[]
+}
+
+model users_roles {
+  id      Int   @id @default(autoincrement())
+  user_id Int
+  role_id Int
+  user    users @relation(fields: [user_id], references: [id])
+  role    roles @relation(fields: [role_id], references: [id])
 }
 
 model pets {
-  id          Int         @id @default(autoincrement())
-  name        String
-  born_year   Int
-  born_month  BornMonth
-  age         String
-  weight      Float       @default(0)
-  weight_unit WeightUnit  @default(kg)
-  desease     Boolean     @default(false)
-  owner_id    Int
-  specie_id   Int
-  breed       String
-  owner       users       @relation(fields: [owner_id], references: [id])
-  specie      pet_specie  @relation(fields: [specie_id], references: [id])
+  id                  Int                    @id @default(autoincrement())
+  name                String
+  born_year           Int
+  born_month          BornMonth
+  age                 String
+  desease             Boolean                 @default(false)
+  user_id             Int
+  specie_id           Int
+  breed               String
+  owner               users                   @relation(fields: [user_id], references: [id])
+  specie              pet_specie              @relation(fields: [specie_id], references: [id])
+  pet_weight          pet_weight[]
+  pet_weight_history  pet_weight_history[]
+  vaccines            vaccines[]
+  deworming           deworming[]
+  recipes             recipes[]
+  notes               pets_notes[]
+  reminders           pets_reminders[]
 }
 
 model pet_specie {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
+  id    Int     @id @default(autoincrement())
+  name  String  @unique
   pets  pets[]
 }
 
-enum WeightUnit {
-  kg
-  g
+model pet_weight_history {
+  id              Int           @id @default(autoincrement())
+  pet_id          Int
+  weight          Float         @default(0)
+  weight_unit_id  Int           @default(1)
+  date            DateTime      @default(now())
+  pet             pets          @relation(fields: [pet_id], references: [id])
+  weight_unit     weight_unit   @relation(fields: [weight_unit_id], references: [id])
+}
+
+model pet_weight {
+  id              Int           @id @default(autoincrement())
+  pet_id          Int
+  weight          Float         @default(0)
+  weight_unit_id  Int           @default(1)
+  pet             pets          @relation(fields: [pet_id], references: [id])
+  weight_unit     weight_unit   @relation(fields: [weight_unit_id], references: [id])
+}
+
+model weight_unit {
+  id                  Int                     @id @default(autoincrement())
+  name                String                  @unique
+  pet_weight_history  pet_weight_history[]
+  pet_weight          pet_weight[]
+}
+
+model vaccines {
+  id          Int         @id @default(autoincrement())
+  name        String
+  quantity    Int
+  date        DateTime    @default(now())
+  content     String      @db.VarChar(10000)
+  pet_id      Int
+  pet         pets        @relation(fields: [pet_id], references: [id])
+}
+
+model deworming {
+  id          Int         @id @default(autoincrement())
+  name        String
+  date        DateTime    @default(now())
+  content     String      @db.VarChar(10000)
+  quantity    Int
+  pet_id      Int
+  pet         pets        @relation(fields: [pet_id], references: [id])
+}
+
+model recipes {
+  id          Int         @id @default(autoincrement())
+  name        String
+  content     String      @db.VarChar(10000)
+  date        DateTime    @default(now())
+  pet_id      Int
+  user_id     Int
+  pet         pets        @relation(fields: [pet_id], references: [id])
+  user        users       @relation(fields: [user_id], references: [id])
+}
+
+model user_notes {
+  id            Int         @id @default(autoincrement())
+  user_id       Int
+  notes_id      Int
+  note          notes       @relation(fields: [notes_id], references: [id])
+  user          users       @relation(fields: [user_id], references: [id])
+}
+
+model pets_notes {
+  id            Int         @id @default(autoincrement())
+  pet_id        Int
+  notes_id      Int
+  note          notes       @relation(fields: [notes_id], references: [id])
+  pet           pets        @relation(fields: [pet_id], references: [id])
+}
+
+model notes {
+  id            Int         @id @default(autoincrement())
+  name          String
+  content       String      @db.VarChar(10000)
+  date          DateTime    @default(now())
+  user_notes   user_notes[]
+  pets_notes   pets_notes[]
+}
+
+model user_reminders {
+  id              Int         @id @default(autoincrement())
+  user_id         Int
+  reminders_id    Int
+  reminder        reminders   @relation(fields: [reminders_id], references: [id])
+  user            users       @relation(fields: [user_id], references: [id])
+}
+
+model pets_reminders {
+  id              Int         @id @default(autoincrement())
+  pet_id          Int
+  reminders_id    Int
+  reminder        reminders   @relation(fields: [reminders_id], references: [id])
+  pet             pets        @relation(fields: [pet_id], references: [id])
+}
+
+model reminders {
+  id                    Int         @id @default(autoincrement())
+  name                  String
+  content               String      @db.VarChar(10000)
+  date_creation         DateTime    @default(now())
+  date_due              DateTime
+  user_reminders       user_reminders[]
+  pets_reminders       pets_reminders[]
 }
 
 enum BornMonth {
@@ -79,10 +204,4 @@ enum BornMonth {
   Octubre
   Noviembre
   Diciembre
-}
-
-enum Roles {
-  user
-  admin
-  vet
 }

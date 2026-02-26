@@ -72,7 +72,7 @@ export class AuthController {
     } catch (err) {
       const error = new Error(err as string);
       this.logger.error(
-        `An error has occured during the verification. ${error.message}`,
+        `An error has occurred during the verification. ${error.message}`,
       );
       if (error.message.includes('jwt expired')) {
         res.status(400).json({

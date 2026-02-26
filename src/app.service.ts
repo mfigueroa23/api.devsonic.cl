@@ -9,23 +9,23 @@ export class AppService {
   async getProperty(key: string): Promise<property> {
     try {
       await this.prisma.$connect();
-      this.logger.log(`Obteniendo propiedad para la clave: ${key}`);
+      this.logger.log(`Requesting property for key: ${key}`);
       const property = await this.prisma.property.findUnique({
         where: { key },
       });
       if (!property) {
         await this.prisma.$disconnect();
-        this.logger.warn(`Propiedad no encontrada para la clave: ${key}`);
-        throw new Error(`Propiedad no encontrada para la clave: ${key}`);
+        this.logger.warn(`Property not found for key: ${key}`);
+        throw new Error(`Property not found for key: ${key}`);
       }
       return property;
     } catch (err) {
       await this.prisma.$disconnect();
       const error = new Error(err as string);
       this.logger.error(
-        `Ha ocurrido un error al obtener la propiedad ${error.message}`,
+        `An error occurred while retrieving the property: ${error.message}`,
       );
-      throw error;
+      throw err;
     } finally {
       await this.prisma.$disconnect();
     }

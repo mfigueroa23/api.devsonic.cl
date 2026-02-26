@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { NotificationPortfolio } from '../types/notifications.types.js';
+import { NotificationPortfolio } from '../types/notification.type.js';
 import { AppService } from '../app.service.js';
 import { BrevoClient } from '@getbrevo/brevo';
 import { PrismaService } from '../prisma.service.js';

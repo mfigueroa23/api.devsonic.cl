@@ -1,83 +1,92 @@
-import { Body, Controller, Headers, Logger, Post, Res } from '@nestjs/common';
+import { Body, Controller, Logger, Post, Res, Headers } from '@nestjs/common';
+import type { LogIn } from '../types/auth.type.js';
+import type { Response } from 'express';
 import { AuthService } from './auth.service.js';
-import type { Response, Request } from 'express';
-import type { AuthBody } from '../types/auth.types.js';
-import { JwtUtility } from '../utils/jwt.util.js';
-import { UsersService } from '../users/users.service.js';
+import { JwtUtility } from '../utilities/jwt.utility.js';
+import { UserService } from '../users/user.service.js';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
     private jwtUtility: JwtUtility,
-    private userService: UsersService,
+    private userService: UserService,
   ) {}
   private readonly logger = new Logger(AuthController.name);
   @Post('logIn')
-  async userLogIn(@Body() authBody: AuthBody, @Res() res: Response) {
+  async logIg(@Body() authData: LogIn, @Res() res: Response) {
     try {
-      this.logger.log(
-        `Inciando solicitud de inicio de sesion, usuario ${authBody.email}`,
-      );
-      const logIn = await this.authService.logIn(authBody);
-      this.logger.log(`Solicitando datos del usuario ${authBody.email}`);
-      const user = await this.userService.getUserByEmail(authBody.email);
-      if (!user.email || !user.role) {
-        throw new Error('error al obtener datos del usuario');
-      }
-      this.logger.log(
-        `Solicitando token de sesion para ${user.email}, perfil ${user.role}`,
-      );
-      const token = await this.jwtUtility.getSessionToken({
-        email: user.email,
-        profile: user.role,
-      });
-      res.status(200).json({
-        status: logIn,
-        token,
-      });
-    } catch (err) {
-      this.logger.error(`Ha ocurrido un error al procesar la solicitud ${err}`);
-      const error = new Error(err as string);
-      if (error.message.includes('no existe')) {
-        this.logger.warn('El usuario no existe');
-        res.status(400).json({
-          status: false,
+      this.logger.log(`Request to login the user ${authData.email}`);
+      const verifyAccess = await this.authService.logIn(authData);
+      if (verifyAccess) {
+        this.logger.log('LogIn successful');
+        const sessionToken = await this.jwtUtility.generateSessionToken(
+          authData.email,
+        );
+        res.status(200).json({
+          message: 'LogIn successful',
+          token: sessionToken,
+          status: verifyAccess,
         });
-      } else if (error.message.includes('invalidas')) {
-        this.logger.warn(error.message);
-        res.status(400).json({
-          status: false,
+      } else {
+        this.logger.warn('LogIn failed');
+        res.status(200).json({
+          message: 'LogIn failed',
+          status: verifyAccess,
+        });
+      }
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `An error occurred while login the user. ${error.message}`,
+      );
+      if (error.message.includes('not found')) {
+        res.status(404).json({
+          message: 'User not found',
         });
       } else {
         res.status(500).json({
-          message: 'Ha ocurrido un error al procesar la solicitud',
+          message: 'An error occurred while login the user',
         });
       }
     }
   }
   @Post('verify')
-  async authVerify(
-    @Headers('X-API-TOKEN') token: string,
+  async verifyToken(
+    @Headers('Authorization') authorization: string,
     @Res() res: Response,
   ) {
     try {
-      this.logger.log('Solicitando verificar token');
-      if (!token) {
+      this.logger.log('Request verifying token');
+      if (!authorization) {
+        this.logger.warn('No token provided');
         res.status(400).json({
-          message: 'Debe proporcionar un token',
+          message: 'Must provide a valid token',
         });
+      } else {
+        const token = authorization.split(' ')[1];
+        const email = await this.jwtUtility.verify(token);
+        const user = await this.userService.findByEmail(email);
+        res.status(200).json({ ...user });
       }
-      const status = await this.jwtUtility.verifyToken(token);
-      res.status(200).json({ status });
     } catch (err) {
       const error = new Error(err as string);
       this.logger.error(
-        `Ha ocurrido un error en la solicitud ${error.message}`,
+        `An error has occured during the verification. ${error.message}`,
       );
-      res.status(500).json({
-        message: 'Ha ocurrido un error al procesar la solicitud',
-      });
+      if (error.message.includes('jwt expired')) {
+        res.status(400).json({
+          message: 'Token expired',
+        });
+      } else if (error.message.includes('invalid signature')) {
+        res.status(400).json({
+          message: 'Token invalid',
+        });
+      } else {
+        res.status(500).json({
+          message: 'An error occurred while verifying the token',
+        });
+      }
     }
   }
 }

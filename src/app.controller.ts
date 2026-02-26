@@ -10,21 +10,24 @@ export class AppController {
   @Get()
   async getServiceStatus(@Res() res: express.Response): Promise<void> {
     try {
-      this.logger.log('Solicitando estado del servicio');
+      this.logger.log('Requesting service status');
       const serviceName = await this.appService.getProperty('SERVICE_NAME');
       const serviceStatus = await this.appService.getProperty('SERVICE_STATUS');
       const properties: property[] = [serviceName, serviceStatus];
-      this.logger.log('Respondiendo estado del servicio');
+      this.logger.log('responding status of the service');
       res.status(200).json({
         serviceName: properties[0].value,
         serviceStatus: properties[1].value,
       });
-    } catch (error) {
-      this.logger.error(`Error al obtener el estado del servicio ${error}`);
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `An error occurred while retrieving the service status. ${error.message}`,
+      );
       res.status(500).json({
         serviceName: 'unknown',
         serviceStatus: 'unknown',
-        error: `${error}`,
+        error: `${err}`,
       });
     }
   }

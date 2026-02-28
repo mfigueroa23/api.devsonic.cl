@@ -1,3 +1,4 @@
+import { BornMonth } from 'generated/prisma/enums.js';
 import { User } from './user.type.js';
 
 export type Pet = {
@@ -15,4 +16,16 @@ export type Pet = {
 export type WeightHistory = {
   weight: string;
   date: Date;
+};
+
+export type PetCreation = {
+  name: string;
+  born_month: BornMonth;
+  born_year: number;
+  age?: string;
+  deseace?: boolean;
+  weight?: number;
+  weight_unit?: string;
+  specie: string;
+  breed: string;
 };

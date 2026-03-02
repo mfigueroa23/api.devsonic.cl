@@ -7,6 +7,8 @@ import {
   UseGuards,
   Headers,
   Body,
+  Patch,
+  Query,
 } from '@nestjs/common';
 import { PetService } from './pet.service.js';
 import type { Response } from 'express';
@@ -14,7 +16,7 @@ import { AuthGuard } from '../guards/auth.guard.js';
 import { ProfileAdminGuard } from '../guards/profile.admin.guard.js';
 import { ProfileUserGuard } from '../guards/profile.user.guard.js';
 import { JwtPayload } from 'jsonwebtoken';
-import type { PetCreation } from '../types/pet.type.js';
+import type { PetCreation, PetUpdate } from '../types/pet.type.js';
 
 @Controller('pets')
 export class PetController {
@@ -58,6 +60,41 @@ export class PetController {
       );
       res.status(500).json({
         message: 'An error has occurred while creating the pet',
+      });
+    }
+  }
+  @Patch()
+  @UseGuards(AuthGuard, ProfileUserGuard)
+  async updatePet(
+    @Headers('Authorization') authorization: string,
+    @Query('pet') petName: string,
+    @Body() pet: PetUpdate,
+    @Res() res: Response,
+  ) {
+    try {
+      this.logger.log(`Requesting update for the pet ${petName}`);
+      if (!petName) {
+        this.logger.warn('Pet name not provided');
+        res.status(400).json({
+          message: 'Must provide a pet name',
+        });
+      } else {
+        const token: string = authorization.split(' ')[1].split('.')[1];
+        const { email }: JwtPayload = JSON.parse(atob(token)) as JwtPayload;
+        const updatePet = await this.petService.updatePet(
+          petName,
+          pet,
+          String(email),
+        );
+        res.status(200).json(updatePet);
+      }
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `An error has occurred while updating the pet. ${error.message}`,
+      );
+      res.status(500).json({
+        message: 'An error occurred while updating the pet',
       });
     }
   }

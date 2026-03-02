@@ -39,6 +39,78 @@ export class PetController {
       });
     }
   }
+  @Get('byOwner')
+  @UseGuards(AuthGuard, ProfileAdminGuard)
+  async getPetsByOwner(
+    @Headers('Authorization') authorization: string,
+    @Query('owner') ownerEmail: string,
+    @Res() res: Response,
+  ) {
+    try {
+      if (ownerEmail) {
+        this.logger.log(`Requesting all the pets for the user ${ownerEmail}`);
+        const pets = await this.petService.getPetsByOwner(ownerEmail);
+        res.status(200).json(pets);
+      } else {
+        const token = authorization.split(' ')[1];
+        const { email } = JSON.parse(atob(token.split('.')[1])) as JwtPayload;
+        this.logger.log(`Requesting all the pets for the user ${email}`);
+        const pets = await this.petService.getPetsByOwner(String(email));
+        res.status(200).json(pets);
+      }
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `An error has occurred while getting the pets. ${error.message}`,
+      );
+      res.status(500).json({
+        message: 'An error ocurred while getting the pets',
+      });
+    }
+  }
+  @Get('byNameAndOwner')
+  @UseGuards(AuthGuard, ProfileAdminGuard)
+  async getPetByNameAndOwner(
+    @Headers('Authorization') authorization: string,
+    @Query('pet') petName: string,
+    @Query('owner') ownerEmail: string,
+    @Res() res: Response,
+  ) {
+    try {
+      if (!petName) {
+        res.status(400).json({ message: 'Must provide a pet name' });
+      }
+      if (ownerEmail) {
+        this.logger.log(
+          `Requesting the pet ${petName} from the user ${ownerEmail}`,
+        );
+        const pet = await this.petService.getPetByNameAndOwner(
+          petName,
+          ownerEmail,
+        );
+        res.status(200).json(pet);
+      } else {
+        const token = authorization.split(' ')[1];
+        const { email } = JSON.parse(atob(token.split('.')[1])) as JwtPayload;
+        this.logger.log(
+          `Requesting the pet ${petName} from the user ${String(email)}`,
+        );
+        const pet = await this.petService.getPetByNameAndOwner(
+          petName,
+          String(email),
+        );
+        res.status(200).json(pet);
+      }
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `An error has occurred while getting the pet ${petName}. ${error.message}`,
+      );
+      res.status(500).json({
+        message: 'An error ocurred while getting the pet',
+      });
+    }
+  }
   @Post()
   @UseGuards(AuthGuard, ProfileUserGuard)
   async createPet(

@@ -191,4 +191,38 @@ export class PetService {
       throw err;
     }
   }
+  async updateWeight(
+    petName: string,
+    weight: number,
+    email: string,
+  ): Promise<Pet> {
+    try {
+      this.logger.log(
+        `Updating the weight of the pet ${petName} from the user ${email}`,
+      );
+      const { id } = await this.getPetByNameAndOwner(petName, email);
+      const updatedWeight = await this.prisma.pet_weight.update({
+        data: { weight },
+        where: { pet_id: id },
+      });
+      const saveHistory = await this.prisma.pet_weight_history.create({
+        data: {
+          weight,
+          date: new Date(),
+          pet_id: Number(id),
+        },
+      });
+      this.logger.log(
+        `Weight of ${petName} updated to ${updatedWeight.weight} on ${saveHistory.date.getDay()} at ${saveHistory.date.getHours()}`,
+      );
+      const pet = await this.getPetByNameAndOwner(petName, email);
+      return pet;
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `An error has occurred while updating the pet weight. ${error.message}`,
+      );
+      throw err;
+    }
+  }
 }

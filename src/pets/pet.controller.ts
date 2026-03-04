@@ -9,6 +9,7 @@ import {
   Body,
   Patch,
   Query,
+  Put,
 } from '@nestjs/common';
 import { PetService } from './pet.service.js';
 import type { Response } from 'express';
@@ -167,6 +168,50 @@ export class PetController {
       );
       res.status(500).json({
         message: 'An error occurred while updating the pet',
+      });
+    }
+  }
+  @Put()
+  @UseGuards(AuthGuard, ProfileUserGuard)
+  async updatePetWeight(
+    @Headers('Authorization') authorization: string,
+    @Query('pet') petName: string,
+    @Query('weight') petWeight: number,
+    @Query('email') userEmail: string,
+    @Res() res: Response,
+  ) {
+    try {
+      if (!petName || !petWeight) {
+        this.logger.warn('Pet name or pet weight not provided');
+        res.status(400).json({
+          message: 'Must provide a pet name and pet weight',
+        });
+      }
+      this.logger.log(`Requesting updating the pet ${petName}`);
+      if (!userEmail) {
+        const update = await this.petService.updateWeight(
+          petName,
+          Number(petWeight),
+          userEmail,
+        );
+        res.status(200).json(update);
+      } else {
+        const token = authorization.split(' ')[1];
+        const { email } = JSON.parse(atob(token.split('.')[1])) as JwtPayload;
+        const update = await this.petService.updateWeight(
+          petName,
+          Number(petWeight),
+          String(email),
+        );
+        res.status(200).json(update);
+      }
+    } catch (err) {
+      const error = new Error(err as string);
+      this.logger.error(
+        `An error has occurred while updating the pet weight. ${error.message}`,
+      );
+      res.status(500).json({
+        message: 'An error occurred while updating the pet weight',
       });
     }
   }

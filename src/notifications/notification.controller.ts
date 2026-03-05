@@ -1,7 +1,7 @@
 import { Body, Controller, Logger, Post, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { NotificationsService } from './notifications.service.js';
-import type { NotificationPortfolio } from '../types/notifications.types.js';
+import { NotificationsService } from './notification.service.js';
+import type { NotificationPortfolio } from '../types/notification.type.js';
 
 @Controller('notifications')
 export class NotificationsController {
@@ -39,9 +39,10 @@ export class NotificationsController {
         message: 'Notificación enviada exitosamente',
         estado: sendNorification,
       });
-    } catch (error) {
+    } catch (err) {
+      const error = new Error(err as string);
       this.logger.error(
-        `Error al enviar la solicitud de notificación ${error}`,
+        `Error al enviar la solicitud de notificación ${error.message}`,
       );
       return res.status(500).json({
         message: 'Error al enviar la solicitud de notificación',

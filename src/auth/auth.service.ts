@@ -1,42 +1,38 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AuthBody } from '../types/auth.types.js';
-import { UsersService } from '../users/users.service.js';
-import { CryptoUtil } from '../utils/crypto.util.js';
-import { AppService } from '../app.service.js';
+import { PrismaService } from '../prisma.service.js';
+import { LogIn } from '../types/auth.type.js';
+import { EncryptionUtility } from '../utilities/encryption.utility.js';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private userService: UsersService,
-    private cryptoUtil: CryptoUtil,
-    private appService: AppService,
+    private prisma: PrismaService,
+    private encryptionUtility: EncryptionUtility,
   ) {}
   private readonly logger = new Logger(AuthService.name);
-  async logIn(authBody: AuthBody): Promise<boolean> {
+  async logIn(authData: LogIn): Promise<boolean> {
     try {
-      this.logger.log(
-        `Procesando inicio de sesion, usuario: ${authBody.email}`,
+      this.logger.log(`LogIn the user ${authData.email}`);
+      const getUserPassword = await this.prisma.users.findUnique({
+        select: { password: true },
+        where: { email: authData.email },
+      });
+      if (!getUserPassword) throw new Error('User not found');
+      const userDecryptPass = await this.encryptionUtility.decrypt(
+        getUserPassword.password,
       );
-      const userPassword = await this.userService.getUserPasswd(authBody.email);
-      const cryptoSecret = await this.appService.getProperty('CRYPTO_SECRET');
-      const cryptoSalt = await this.appService.getProperty('CRYPTO_SALT');
-      const userPasswdPlainText = this.cryptoUtil.decrypt(
-        userPassword,
-        cryptoSecret.value,
-        cryptoSalt.value,
-      );
-      this.logger.log('Comparando contraseñas');
-      if (authBody.password === userPasswdPlainText) {
-        this.logger.log('Credenciales validas');
+      this.logger.log('Comparing passwords');
+      if (authData.password === userDecryptPass) {
+        this.logger.log('Password match');
         return true;
       } else {
-        this.logger.warn('Credenciales invalidas');
-        throw new Error('Credenciales invalidas');
+        this.logger.warn("Password don't match");
+        return false;
       }
     } catch (err) {
       const error = new Error(err as string);
       this.logger.error(
-        `Ha ocurrido un error al procesar la solicitud ${error.message}`,
+        `An error has occured while login the user. ${error.message}`,
       );
       throw err;
     }

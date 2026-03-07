@@ -23,7 +23,7 @@ export class PetService {
         },
       });
       const pets: Pet[] = await Promise.all(
-        getAllPets.map(async (pet, i) => {
+        getAllPets.map(async (pet) => {
           const user = await this.userService.findByEmail(pet.owner.email);
           return {
             id: pet.id,
@@ -34,7 +34,7 @@ export class PetService {
             specie: pet.specie.name,
             breed: pet.breed,
             user: user,
-            pet_weight: `${pet.pet_weight[i].weight} ${pet.pet_weight[i].weight_unit.name}`,
+            pet_weight: `${pet.pet_weight[0].weight} ${pet.pet_weight[0].weight_unit.name}`,
             weight_history: pet.pet_weight_history.map((weight) => ({
               weight: `${weight.weight} ${weight.weight_unit.name}`,
               date: weight.date,
@@ -64,7 +64,7 @@ export class PetService {
         where: { owner: { email } },
       });
       const pets: Pet[] = await Promise.all(
-        userPets.map(async (pet, i) => {
+        userPets.map(async (pet) => {
           const user = await this.userService.findByEmail(pet.owner.email);
           return {
             id: pet.id,
@@ -75,7 +75,7 @@ export class PetService {
             breed: pet.breed,
             desease: pet.desease,
             user,
-            pet_weight: `${pet.pet_weight[i].weight} ${pet.pet_weight[i].weight_unit.name}`,
+            pet_weight: `${pet.pet_weight[0].weight} ${pet.pet_weight[0].weight_unit.name}`,
             weight_history: pet.pet_weight_history.map((weight) => ({
               date: weight.date,
               weight: `${weight.weight} ${weight.weight_unit.name}`,

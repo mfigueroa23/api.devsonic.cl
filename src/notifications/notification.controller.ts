@@ -13,7 +13,7 @@ export class NotificationsController {
     @Res() res: Response,
   ) {
     try {
-      this.logger.log('Enviando solicitud de notificación de portafolio');
+      this.logger.log('Sending portfolio notification');
       const message: NotificationPortfolio = {
         name: req.name,
         email: req.email,
@@ -24,28 +24,26 @@ export class NotificationsController {
         message.email === undefined ||
         message.message === undefined
       ) {
-        this.logger.warn('Faltan datos en la solicitud de notificación');
+        this.logger.warn('Missing name, email or message in the request');
         return res.status(400).json({
           message:
-            'Faltan datos en la solicitud de notificación {name, email, message}',
+            'Missing data in the notification request {name, email, message}',
         });
       }
       const sendNorification =
         await this.notificationsService.sendPortfolioNotification(message);
-      this.logger.log(
-        'Enviando respuesta de solicitud de notificación de portafolio',
-      );
+      this.logger.log('Sending response from notification request');
       return res.status(200).json({
-        message: 'Notificación enviada exitosamente',
+        message: 'Notification sent successfuly',
         estado: sendNorification,
       });
     } catch (err) {
       const error = new Error(err as string);
       this.logger.error(
-        `Error al enviar la solicitud de notificación ${error.message}`,
+        `An error has occurred while sending the notification ${error.message}`,
       );
       return res.status(500).json({
-        message: 'Error al enviar la solicitud de notificación',
+        message: 'An error has occurred while sending the notification',
       });
     }
   }

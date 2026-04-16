@@ -25,3 +25,46 @@ model layouts {
   description String
   content     String @db.VarChar(10000)
 }
+
+model about {
+  id          Int    @id @default(autoincrement())
+  icon        String
+  title       String
+  description String
+}
+
+model contact {
+  id          Int    @id @default(autoincrement())
+  icon        String
+  label       String
+  value       String
+  href        String
+}
+
+model experience {
+  id            Int    @id @default(autoincrement())
+  period        String
+  role          String
+  company       String
+  description   String
+  technologies  String
+  current       Boolean @default(false)
+}
+
+model project {
+  id          Int    @id @default(autoincrement())
+  title       String
+  image       String
+  tags        String
+  description String @default("")
+  link        String @default("")
+  githubLink  String @default("")
+}
+
+model testimonials {
+  id          Int    @id @default(autoincrement())
+  quote       String
+  author      String
+  role        String
+  avatar      String
+}

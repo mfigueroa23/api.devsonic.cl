@@ -1,6 +1,6 @@
 # API DevSonic
 
-Backend API service built with NestJS, Prisma, and PostgreSQL for the DevSonic ecosystem. Provides RESTful endpoints for user management, pet management, authentication, and notifications.
+Backend API service built with NestJS, Prisma, and PostgreSQL for the DevSonic portfolio ecosystem. Provides RESTful endpoints for CV/portfolio data management, email notifications, and layout template storage.
 
 ## Tech Stack
 
@@ -14,13 +14,12 @@ Backend API service built with NestJS, Prisma, and PostgreSQL for the DevSonic e
 
 ## Features
 
-- JWT-based authentication with role-based access control (user, admin)
-- User management with encrypted password storage
-- Pet management with weight tracking and weight history
+- JWT-based authentication for write operations
+- Portfolio CV data management (about, experience, projects, testimonials, contact)
 - Email notifications via Brevo integration
-- CORS domain whitelist management
-- Layout/template system backed by the database
-- Comprehensive request logging
+- CORS domain whitelist management (database-driven)
+- Layout/template system backed by the database (Base64-encoded HTML)
+- Runtime configuration via database properties table
 
 ## Installation
 
@@ -99,33 +98,28 @@ Create a `.env` file in the root directory:
 
 ```env
 DATABASE_URL="postgresql://user:password@localhost:5432/dbname"
-JWT_SECRET="your-jwt-secret"
 PORT=3000
 ```
 
-> Note: The Brevo API key and service configuration values (SERVICE_NAME, SERVICE_STATUS) are stored in the `property` table in the database, not in environment variables.
+> Note: `JWT_SECRET`, `BREVO_APIKEY`, `SERVICE_NAME`, and `SERVICE_STATUS` are stored in the `property` table in the database, not in environment variables.
 
 ---
 
-## API Endpoints
+## Authentication
 
-### Authentication Guards
+Write operations (POST, PATCH, DELETE) on most modules are protected by `JwtGuard`. All GET endpoints are public, except for the `layouts` module where all operations require authentication.
 
-Several routes are protected by guards applied in sequence:
-
-| Guard | Requirement |
-|---|---|
-| `AuthGuard` | Validates the JWT in the `Authorization: Bearer <token>` header. Returns `401` if missing or invalid. |
-| `ProfileAdminGuard` | Checks that the authenticated user has the `admin` role. Returns `401` if not. |
-| `ProfileUserGuard` | Checks that the authenticated user has the `user` role. Returns `401` if not. |
-
-Routes that require authentication must include the header:
+**Header format:**
 
 ```
 Authorization: Bearer <jwt_token>
 ```
 
+`JwtGuard` validates the token using `JWT_SECRET` fetched from the `property` table at runtime. Returns `401 Unauthorized` if the header is missing, malformed, or the token is invalid/expired.
+
 ---
+
+## API Endpoints
 
 ### Health Check
 
@@ -156,485 +150,17 @@ Returns the current service name and status from database configuration.
 
 ---
 
-### Auth Module
+### About Module
 
-Base path: `/auth`
+Base path: `/about`
 
 ---
 
-#### `POST /auth/logIn`
+#### `GET /about`
 
-Authenticates a user by email and password. Returns a JWT session token on success.
+Returns all about section items.
 
 **Auth required:** No
-
-**Request body**
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `email` | string | Yes | The user's email address |
-| `password` | string | Yes | The user's plain-text password |
-
-```json
-{
-  "email": "user@example.com",
-  "password": "securePassword123"
-}
-```
-
-**Response `200 OK` — credentials valid**
-
-```json
-{
-  "message": "LogIn successful",
-  "token": "<jwt_token>",
-  "status": true
-}
-```
-
-**Response `200 OK` — credentials invalid (password mismatch)**
-
-```json
-{
-  "message": "LogIn failed",
-  "status": false
-}
-```
-
-**Response `404 Not Found` — user does not exist**
-
-```json
-{
-  "message": "User not found"
-}
-```
-
-**Response `500 Internal Server Error`**
-
-```json
-{
-  "message": "An error occurred while login the user"
-}
-```
-
----
-
-#### `POST /auth/verify`
-
-Verifies a JWT token and returns the full user object associated with it.
-
-**Auth required:** No (token is passed in the header manually, not via guard)
-
-**Request headers**
-
-| Header | Required | Description |
-|---|---|---|
-| `Authorization` | Yes | `Bearer <jwt_token>` |
-
-**Response `200 OK`**
-
-Returns the user object for the email encoded in the token:
-
-```json
-{
-  "name": "Marco",
-  "lastname": "Figueroa",
-  "email": "user@example.com",
-  "rut": "12345678-9",
-  "active": true,
-  "roles": ["user"]
-}
-```
-
-**Response `400 Bad Request` — no token provided**
-
-```json
-{
-  "message": "Must provide a valid token"
-}
-```
-
-**Response `400 Bad Request` — token expired**
-
-```json
-{
-  "message": "Token expired"
-}
-```
-
-**Response `400 Bad Request` — token has invalid signature**
-
-```json
-{
-  "message": "Token invalid"
-}
-```
-
-**Response `500 Internal Server Error`**
-
-```json
-{
-  "message": "An error occurred while verifying the token"
-}
-```
-
----
-
-### Users Module
-
-Base path: `/users`
-
----
-
-#### `GET /users`
-
-Returns all users in the system.
-
-**Auth required:** Yes — `AuthGuard` + `ProfileAdminGuard` (admin role)
-
-**Response `200 OK` — users found**
-
-```json
-[
-  {
-    "name": "Marco",
-    "lastname": "Figueroa",
-    "email": "user@example.com",
-    "rut": "12345678-9",
-    "active": true,
-    "roles": ["user", "admin"]
-  }
-]
-```
-
-**Response `200 OK` — no users in database**
-
-```json
-{
-  "message": "No users found"
-}
-```
-
-**Response `401 Unauthorized` — missing or invalid token / insufficient role**
-
-```json
-{
-  "message": "Unauthorized",
-  "statusCode": 401
-}
-```
-
-**Response `500 Internal Server Error`**
-
-```json
-{
-  "message": "An error occurred while retrieving users"
-}
-```
-
----
-
-#### `GET /users/find`
-
-Finds a single user by email or RUT. Exactly one query parameter must be provided.
-
-**Auth required:** Yes — `AuthGuard` + `ProfileAdminGuard` (admin role)
-
-**Query parameters**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `email` | string | Conditional | User's email address. Cannot be combined with `rut`. |
-| `rut` | string | Conditional | User's Chilean RUT in `12345678-9` format. Cannot be combined with `email`. |
-
-**Response `200 OK`**
-
-```json
-{
-  "name": "Marco",
-  "lastname": "Figueroa",
-  "email": "user@example.com",
-  "rut": "12345678-9",
-  "active": true,
-  "roles": ["user"]
-}
-```
-
-**Response `400 Bad Request` — both parameters provided**
-
-```json
-{
-  "message": "Please provide either email or rut, not both"
-}
-```
-
-**Response `400 Bad Request` — no parameter provided**
-
-```json
-{
-  "message": "Please provide either email or rut as a query parameter"
-}
-```
-
-**Response `404 Not Found`**
-
-```json
-{
-  "message": "User not found"
-}
-```
-
-**Response `500 Internal Server Error`**
-
-```json
-{
-  "message": "An error occurred while retrieving users"
-}
-```
-
----
-
-#### `POST /users`
-
-Creates a new user. The password is encrypted before storage. The `user` role is automatically assigned to the new user.
-
-**Auth required:** No
-
-**Request body**
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `name` | string | Yes | User's first name |
-| `lastname` | string | Yes | User's last name |
-| `email` | string | Yes | Unique email address |
-| `rut` | string | Yes | Chilean RUT in `12345678-9` format (digits-verifier) |
-| `password` | string | Yes | Plain-text password, encrypted before storage |
-
-```json
-{
-  "name": "Marco",
-  "lastname": "Figueroa",
-  "email": "user@example.com",
-  "rut": "12345678-9",
-  "password": "securePassword123"
-}
-```
-
-**Response `201 Created`**
-
-```json
-{
-  "name": "Marco",
-  "lastname": "Figueroa",
-  "email": "user@example.com",
-  "rut": "12345678-9",
-  "active": true,
-  "roles": ["user"]
-}
-```
-
-**Response `400 Bad Request` — duplicate email or RUT**
-
-```json
-{
-  "message": "A user with the same email or rut already exists"
-}
-```
-
-**Response `500 Internal Server Error`**
-
-```json
-{
-  "message": "An error occurred while creating a user"
-}
-```
-
----
-
-#### `PATCH /users`
-
-Updates mutable fields of an existing user. Exactly one query parameter (`email` or `rut`) must be provided to identify the target user. The fields `rut`, `rut_dv`, `email`, and `active` cannot be updated via this endpoint. If a new password is provided it is re-encrypted before storage.
-
-**Auth required:** Yes — `AuthGuard` + `ProfileAdminGuard` (admin role)
-
-**Query parameters**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `email` | string | Conditional | Identify target user by email. Cannot be combined with `rut`. |
-| `rut` | string | Conditional | Identify target user by RUT (`12345678-9` format). Cannot be combined with `email`. |
-
-**Request body** (all fields optional, at least one should be provided)
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `name` | string | No | New first name |
-| `lastname` | string | No | New last name |
-| `password` | string | No | New plain-text password, re-encrypted before storage |
-
-```json
-{
-  "name": "Marco",
-  "lastname": "Updated"
-}
-```
-
-**Response `200 OK`**
-
-Returns the updated user object in the same shape as `GET /users/find`.
-
-**Response `400 Bad Request` — no query parameter provided**
-
-```json
-{
-  "message": "Please provide either email or rut as a query parameter"
-}
-```
-
-**Response `400 Bad Request` — attempt to update restricted fields**
-
-```json
-{
-  "message": "Updating rut, rut_dv, email or active fields is not allowed"
-}
-```
-
-**Response `500 Internal Server Error`**
-
-```json
-{
-  "message": "An error occurred while updating a user"
-}
-```
-
----
-
-#### `PUT /users`
-
-Adds or removes a role from a user. Exactly one of `email` or `rut` must be provided.
-
-**Auth required:** Yes — `AuthGuard` + `ProfileAdminGuard` (admin role)
-
-**Query parameters**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `email` | string | Conditional | Identify target user by email. Cannot be combined with `rut`. |
-| `rut` | string | Conditional | Identify target user by RUT (`12345678-9` format). Cannot be combined with `email`. |
-| `role` | string | Yes | Role name to assign or remove (e.g., `admin`, `user`, `vet`) |
-| `action` | string | Yes | Must be `add` or `remove` |
-
-**Response `200 OK`**
-
-Returns the updated user object in the same shape as `GET /users/find`.
-
-**Response `400 Bad Request` — both email and rut provided**
-
-```json
-{
-  "message": "Please provide either email or rut, not both, for role update"
-}
-```
-
-**Response `400 Bad Request` — no identifier provided**
-
-```json
-{
-  "message": "Please provide either email or rut as a query parameter"
-}
-```
-
-**Response `400 Bad Request` — invalid action value**
-
-```json
-{
-  "message": "Invalid action. Use <add> or <remove>"
-}
-```
-
-**Response `400 Bad Request` — user already has the role (on add)**
-
-```json
-{
-  "message": "The user already has this role"
-}
-```
-
-**Response `400 Bad Request` — user does not have the role (on remove)**
-
-```json
-{
-  "message": "User does not have the role '<role>' assigned"
-}
-```
-
-**Response `500 Internal Server Error`**
-
-```json
-{
-  "message": "An error occurred while updating user role"
-}
-```
-
----
-
-#### `DELETE /users`
-
-Updates the active status of a user (soft enable/disable). Despite using the `DELETE` HTTP method, this does not remove the user record. Exactly one of `email` or `rut` must be provided.
-
-**Auth required:** Yes — `AuthGuard` + `ProfileAdminGuard` (admin role)
-
-**Query parameters**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `email` | string | Conditional | Identify target user by email. Cannot be combined with `rut`. |
-| `rut` | string | Conditional | Identify target user by RUT (`12345678-9` format). Cannot be combined with `email`. |
-| `active` | string | Yes | `"true"` to activate, `"false"` to deactivate |
-
-**Response `200 OK`**
-
-Returns the updated user object in the same shape as `GET /users/find`.
-
-**Response `400 Bad Request` — both email and rut provided**
-
-```json
-{
-  "message": "Please provide either email or rut, not both, for status update"
-}
-```
-
-**Response `400 Bad Request` — no identifier provided**
-
-```json
-{
-  "message": "Please provide either email or rut as a query parameter"
-}
-```
-
-**Response `500 Internal Server Error`**
-
-```json
-{
-  "message": "An error occurred while updating user status"
-}
-```
-
----
-
-### Pets Module
-
-Base path: `/pets`
-
-All pet endpoints require authentication. The owner of the pet is determined from the JWT token payload (the `email` claim), so a user can only create or modify their own pets. Admin endpoints accept an optional `owner` query parameter to override the identity lookup and target another user's pets.
-
----
-
-#### `GET /pets`
-
-Returns all pets across all users.
-
-**Auth required:** Yes — `AuthGuard` + `ProfileAdminGuard` (admin role)
 
 **Response `200 OK`**
 
@@ -642,132 +168,69 @@ Returns all pets across all users.
 [
   {
     "id": 1,
-    "name": "Firulais",
-    "born_date": "Marzo 2020",
-    "age": "4",
-    "desease": false,
-    "specie": "Perro",
-    "breed": "Labrador",
-    "user": {
-      "name": "Marco",
-      "lastname": "Figueroa",
-      "email": "user@example.com",
-      "rut": "12345678-9",
-      "active": true,
-      "roles": ["user"]
-    },
-    "pet_weight": "10.5 kg",
-    "weight_history": [
-      {
-        "weight": "10.5 kg",
-        "date": "2024-03-01T12:00:00.000Z"
-      }
-    ]
+    "icon": "FaUser",
+    "title": "Who I am",
+    "description": "Full-stack developer with 5+ years of experience."
   }
 ]
 ```
 
-**Response `500 Internal Server Error`**
-
-```json
-{
-  "message": "An error occurred while fetching the pets"
-}
-```
-
 ---
 
-#### `GET /pets/byOwner`
+#### `GET /about/:id`
 
-Returns all pets belonging to an owner. If the `owner` query parameter is omitted, the owner email is extracted from the JWT token.
+Returns a single about item by ID.
 
-**Auth required:** Yes — `AuthGuard` + `ProfileAdminGuard` (admin role)
+**Auth required:** No
 
-**Query parameters**
+**Path parameters**
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `owner` | string | No | Email of the target owner. If omitted, the authenticated user's email is used. |
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | About item ID |
 
 **Response `200 OK`**
 
-Returns an array of pet objects in the same shape as `GET /pets`.
+```json
+{
+  "id": 1,
+  "icon": "FaUser",
+  "title": "Who I am",
+  "description": "Full-stack developer with 5+ years of experience."
+}
+```
 
-**Response `500 Internal Server Error`**
+**Response `404 Not Found`**
 
 ```json
 {
-  "message": "An error ocurred while getting the pets"
+  "message": "About with id <id> not found",
+  "error": "Not Found",
+  "statusCode": 404
 }
 ```
 
 ---
 
-#### `GET /pets/byNameAndOwner`
+#### `POST /about`
 
-Returns a specific pet identified by name and owner. If the `owner` query parameter is omitted, the owner email is extracted from the JWT token.
+Creates a new about item.
 
-**Auth required:** Yes — `AuthGuard` + `ProfileAdminGuard` (admin role)
-
-**Query parameters**
-
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `pet` | string | Yes | The pet's name |
-| `owner` | string | No | Email of the target owner. If omitted, the authenticated user's email is used. |
-
-**Response `200 OK`**
-
-Returns a single pet object in the same shape as `GET /pets`.
-
-**Response `400 Bad Request` — pet name not provided**
-
-```json
-{
-  "message": "Must provide a pet name"
-}
-```
-
-**Response `500 Internal Server Error`**
-
-```json
-{
-  "message": "An error ocurred while getting the pet"
-}
-```
-
----
-
-#### `POST /pets`
-
-Creates a new pet. The owner is derived from the email claim in the JWT token.
-
-**Auth required:** Yes — `AuthGuard` + `ProfileUserGuard` (user role)
+**Auth required:** Yes — `JwtGuard`
 
 **Request body**
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `name` | string | Yes | Pet's name |
-| `born_month` | string (BornMonth enum) | Yes | Month of birth in Spanish. One of: `Enero`, `Febrero`, `Marzo`, `Abril`, `Mayo`, `Junio`, `Julio`, `Agosto`, `Septiembre`, `Octubre`, `Noviembre`, `Diciembre` |
-| `born_year` | number | Yes | Year of birth (e.g., `2020`) |
-| `age` | string | No | Age string. If omitted defaults to `"0"` |
-| `deseace` | boolean | No | Whether the pet has a disease. Defaults to `false` |
-| `weight` | number | No | Current weight value |
-| `weight_unit` | string | No | Weight unit name as stored in the `weight_unit` table (e.g., `"kg"`) |
-| `specie` | string | Yes | Species name as stored in the `pet_specie` table (e.g., `"Perro"`) |
-| `breed` | string | Yes | Breed description |
+| `icon` | string | Yes | Icon identifier (e.g., component name or icon key) |
+| `title` | string | Yes | Section title |
+| `description` | string | Yes | Section description text |
 
 ```json
 {
-  "name": "Firulais",
-  "born_month": "Marzo",
-  "born_year": 2020,
-  "deseace": false,
-  "weight": 10.5,
-  "weight_unit": "kg",
-  "specie": "Perro",
-  "breed": "Labrador"
+  "icon": "FaUser",
+  "title": "Who I am",
+  "description": "Full-stack developer with 5+ years of experience."
 }
 ```
 
@@ -775,124 +238,753 @@ Creates a new pet. The owner is derived from the email claim in the JWT token.
 
 ```json
 {
-  "name": "Firulais",
-  "born_date": "Marzo 2020",
-  "age": "0",
-  "desease": false,
-  "specie": "Perro",
-  "breed": "Labrador",
-  "user": {
-    "name": "Marco",
-    "lastname": "Figueroa",
-    "email": "user@example.com",
-    "rut": "12345678-9",
-    "active": true,
-    "roles": ["user"]
-  },
-  "pet_weight": "10.5 kg",
-  "weight_history": [
-    {
-      "weight": "10.5 kg",
-      "date": "2024-03-01T12:00:00.000Z"
-    }
-  ]
+  "id": 1,
+  "icon": "FaUser",
+  "title": "Who I am",
+  "description": "Full-stack developer with 5+ years of experience."
 }
 ```
 
-**Response `500 Internal Server Error`**
-
-```json
-{
-  "message": "An error has occurred while creating the pet"
-}
-```
+**Response `401 Unauthorized`** — missing or invalid token
 
 ---
 
-#### `PATCH /pets`
+#### `PATCH /about/:id`
 
-Updates mutable fields of an existing pet belonging to the authenticated user. The `age` field cannot be updated via this endpoint (it is considered auto-generated). The owner is always taken from the JWT token.
+Updates an existing about item.
 
-**Auth required:** Yes — `AuthGuard` + `ProfileUserGuard` (user role)
+**Auth required:** Yes — `JwtGuard`
 
-**Query parameters**
+**Path parameters**
 
-| Parameter | Type | Required | Description |
-|---|---|---|---|
-| `pet` | string | Yes | Name of the pet to update |
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | About item ID |
 
 **Request body** (all fields optional)
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `name` | string | No | New pet name |
-| `born_month` | string (BornMonth enum) | No | New birth month (Spanish enum value) |
-| `born_year` | number | No | New birth year |
-| `desease` | boolean | No | Disease status |
-| `breed` | string | No | New breed |
+| `icon` | string | No | Icon identifier |
+| `title` | string | No | Section title |
+| `description` | string | No | Section description text |
 
-```json
-{
-  "name": "Firulais Updated",
-  "breed": "Golden Retriever"
-}
-```
+**Response `200 OK`** — returns updated about object
+
+**Response `404 Not Found`** — item not found
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+#### `DELETE /about/:id`
+
+Deletes an about item.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | About item ID |
+
+**Response `204 No Content`** — deleted successfully
+
+**Response `404 Not Found`** — item not found
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+### Contact Module
+
+Base path: `/contact`
+
+---
+
+#### `GET /contact`
+
+Returns all contact items.
+
+**Auth required:** No
 
 **Response `200 OK`**
 
-Returns the updated pet object in the same shape as `GET /pets`.
+```json
+[
+  {
+    "id": 1,
+    "icon": "FaEnvelope",
+    "label": "Email",
+    "value": "mfigueroa@devsonic.cl",
+    "href": "mailto:mfigueroa@devsonic.cl"
+  }
+]
+```
 
-**Response `400 Bad Request` — pet name not provided**
+---
+
+#### `GET /contact/:id`
+
+Returns a single contact item by ID.
+
+**Auth required:** No
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Contact item ID |
+
+**Response `200 OK`**
 
 ```json
 {
-  "message": "Must provide a pet name"
+  "id": 1,
+  "icon": "FaEnvelope",
+  "label": "Email",
+  "value": "mfigueroa@devsonic.cl",
+  "href": "mailto:mfigueroa@devsonic.cl"
 }
 ```
 
-**Response `500 Internal Server Error`**
+**Response `404 Not Found`**
 
 ```json
 {
-  "message": "An error occurred while updating the pet"
+  "message": "Contact with id <id> not found",
+  "error": "Not Found",
+  "statusCode": 404
 }
 ```
 
 ---
 
-#### `PUT /pets`
+#### `POST /contact`
 
-Updates the current weight of a pet and appends an entry to the pet's weight history. The owner is taken from the JWT token unless `email` is provided.
+Creates a new contact item.
 
-**Auth required:** Yes — `AuthGuard` + `ProfileUserGuard` (user role)
+**Auth required:** Yes — `JwtGuard`
 
-**Query parameters**
+**Request body**
 
-| Parameter | Type | Required | Description |
+| Field | Type | Required | Description |
 |---|---|---|---|
-| `pet` | string | Yes | Name of the pet |
-| `weight` | number | Yes | New weight value |
-| `email` | string | No | Owner email override. If omitted, the authenticated user's email is used from the JWT token. |
+| `icon` | string | Yes | Icon identifier |
+| `label` | string | Yes | Display label (e.g., "Email", "GitHub") |
+| `value` | string | Yes | Display value (e.g., email address, username) |
+| `href` | string | Yes | Link URL or protocol (e.g., `mailto:`, `https://`) |
+
+```json
+{
+  "icon": "FaEnvelope",
+  "label": "Email",
+  "value": "mfigueroa@devsonic.cl",
+  "href": "mailto:mfigueroa@devsonic.cl"
+}
+```
+
+**Response `201 Created`** — returns created contact object
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+#### `PATCH /contact/:id`
+
+Updates an existing contact item.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Contact item ID |
+
+**Request body** (all fields optional)
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `icon` | string | No | Icon identifier |
+| `label` | string | No | Display label |
+| `value` | string | No | Display value |
+| `href` | string | No | Link URL |
+
+**Response `200 OK`** — returns updated contact object
+
+**Response `404 Not Found`** — item not found
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+#### `DELETE /contact/:id`
+
+Deletes a contact item.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Contact item ID |
+
+**Response `204 No Content`** — deleted successfully
+
+**Response `404 Not Found`** — item not found
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+### Experience Module
+
+Base path: `/experience`
+
+---
+
+#### `GET /experience`
+
+Returns all work experience entries.
+
+**Auth required:** No
 
 **Response `200 OK`**
 
-Returns the updated pet object in the same shape as `GET /pets`.
+```json
+[
+  {
+    "id": 1,
+    "period": "Jan 2022 - Present",
+    "role": "Full-Stack Developer",
+    "company": "DevSonic",
+    "description": "Development of web applications and APIs.",
+    "technologies": "NestJS, React, PostgreSQL",
+    "current": true
+  }
+]
+```
 
-**Response `400 Bad Request` — pet name or weight not provided**
+---
+
+#### `GET /experience/:id`
+
+Returns a single experience entry by ID.
+
+**Auth required:** No
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Experience entry ID |
+
+**Response `200 OK`** — returns single experience object
+
+**Response `404 Not Found`**
 
 ```json
 {
-  "message": "Must provide a pet name and pet weight"
+  "message": "Experience with id <id> not found",
+  "error": "Not Found",
+  "statusCode": 404
 }
 ```
 
-**Response `500 Internal Server Error`**
+---
+
+#### `POST /experience`
+
+Creates a new experience entry.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `period` | string | Yes | Time period (e.g., `"Jan 2020 - Dec 2022"`) |
+| `role` | string | Yes | Job title |
+| `company` | string | Yes | Company name |
+| `description` | string | Yes | Job description |
+| `technologies` | string | Yes | Technologies used (comma-separated or free text) |
+| `current` | boolean | No | Whether this is the current position. Default: `false` |
 
 ```json
 {
-  "message": "An error occurred while updating the pet weight"
+  "period": "Jan 2022 - Present",
+  "role": "Full-Stack Developer",
+  "company": "DevSonic",
+  "description": "Development of web applications and APIs.",
+  "technologies": "NestJS, React, PostgreSQL",
+  "current": true
 }
 ```
+
+**Response `201 Created`** — returns created experience object
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+#### `PATCH /experience/:id`
+
+Updates an existing experience entry.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Experience entry ID |
+
+**Request body** (all fields optional)
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `period` | string | No | Time period |
+| `role` | string | No | Job title |
+| `company` | string | No | Company name |
+| `description` | string | No | Job description |
+| `technologies` | string | No | Technologies used |
+| `current` | boolean | No | Current position flag |
+
+**Response `200 OK`** — returns updated experience object
+
+**Response `404 Not Found`** — entry not found
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+#### `DELETE /experience/:id`
+
+Deletes an experience entry.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Experience entry ID |
+
+**Response `204 No Content`** — deleted successfully
+
+**Response `404 Not Found`** — entry not found
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+### Project Module
+
+Base path: `/project`
+
+---
+
+#### `GET /project`
+
+Returns all portfolio projects.
+
+**Auth required:** No
+
+**Response `200 OK`**
+
+```json
+[
+  {
+    "id": 1,
+    "title": "API DevSonic",
+    "image": "https://example.com/image.png",
+    "tags": "NestJS, Prisma, PostgreSQL",
+    "description": "Backend API for the DevSonic portfolio.",
+    "link": "https://api.devsonic.cl",
+    "githubLink": "https://github.com/devsonic/api"
+  }
+]
+```
+
+---
+
+#### `GET /project/:id`
+
+Returns a single project by ID.
+
+**Auth required:** No
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Project ID |
+
+**Response `200 OK`** — returns single project object
+
+**Response `404 Not Found`**
+
+```json
+{
+  "message": "Project with id <id> not found",
+  "error": "Not Found",
+  "statusCode": 404
+}
+```
+
+---
+
+#### `POST /project`
+
+Creates a new project.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `title` | string | Yes | Project name |
+| `image` | string | Yes | Image URL |
+| `tags` | string | Yes | Tags (comma-separated or free text) |
+| `description` | string | No | Project description. Default: `""` |
+| `link` | string | No | Live project URL. Default: `""` |
+| `githubLink` | string | No | GitHub repository URL. Default: `""` |
+
+```json
+{
+  "title": "API DevSonic",
+  "image": "https://example.com/image.png",
+  "tags": "NestJS, Prisma, PostgreSQL",
+  "description": "Backend API for the DevSonic portfolio.",
+  "link": "https://api.devsonic.cl",
+  "githubLink": "https://github.com/devsonic/api"
+}
+```
+
+**Response `201 Created`** — returns created project object
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+#### `PATCH /project/:id`
+
+Updates an existing project.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Project ID |
+
+**Request body** (all fields optional)
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `title` | string | No | Project name |
+| `image` | string | No | Image URL |
+| `tags` | string | No | Tags |
+| `description` | string | No | Project description |
+| `link` | string | No | Live project URL |
+| `githubLink` | string | No | GitHub repository URL |
+
+**Response `200 OK`** — returns updated project object
+
+**Response `404 Not Found`** — project not found
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+#### `DELETE /project/:id`
+
+Deletes a project.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Project ID |
+
+**Response `204 No Content`** — deleted successfully
+
+**Response `404 Not Found`** — project not found
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+### Testimonials Module
+
+Base path: `/testimonials`
+
+---
+
+#### `GET /testimonials`
+
+Returns all testimonials.
+
+**Auth required:** No
+
+**Response `200 OK`**
+
+```json
+[
+  {
+    "id": 1,
+    "quote": "Marco delivered the project on time and exceeded expectations.",
+    "author": "Jane Doe",
+    "role": "CTO at Acme Corp",
+    "avatar": "https://example.com/avatar.png"
+  }
+]
+```
+
+---
+
+#### `GET /testimonials/:id`
+
+Returns a single testimonial by ID.
+
+**Auth required:** No
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Testimonial ID |
+
+**Response `200 OK`** — returns single testimonial object
+
+**Response `404 Not Found`**
+
+```json
+{
+  "message": "Testimonial with id <id> not found",
+  "error": "Not Found",
+  "statusCode": 404
+}
+```
+
+---
+
+#### `POST /testimonials`
+
+Creates a new testimonial.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `quote` | string | Yes | Testimonial text |
+| `author` | string | Yes | Author's full name |
+| `role` | string | Yes | Author's title and/or company |
+| `avatar` | string | Yes | Avatar image URL |
+
+```json
+{
+  "quote": "Marco delivered the project on time and exceeded expectations.",
+  "author": "Jane Doe",
+  "role": "CTO at Acme Corp",
+  "avatar": "https://example.com/avatar.png"
+}
+```
+
+**Response `201 Created`** — returns created testimonial object
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+#### `PATCH /testimonials/:id`
+
+Updates an existing testimonial.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Testimonial ID |
+
+**Request body** (all fields optional)
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `quote` | string | No | Testimonial text |
+| `author` | string | No | Author's full name |
+| `role` | string | No | Author's title and/or company |
+| `avatar` | string | No | Avatar image URL |
+
+**Response `200 OK`** — returns updated testimonial object
+
+**Response `404 Not Found`** — testimonial not found
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+#### `DELETE /testimonials/:id`
+
+Deletes a testimonial.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Testimonial ID |
+
+**Response `204 No Content`** — deleted successfully
+
+**Response `404 Not Found`** — testimonial not found
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+### Layouts Module
+
+Base path: `/layouts`
+
+Stores Base64-encoded HTML email and UI templates. All endpoints require authentication.
+
+---
+
+#### `GET /layouts`
+
+Returns all layout templates.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Response `200 OK`**
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Contact Devsonic Portfolio",
+    "description": "Email template for portfolio contact form",
+    "content": "<base64-encoded-html>"
+  }
+]
+```
+
+---
+
+#### `GET /layouts/:id`
+
+Returns a single layout template by ID.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Layout ID |
+
+**Response `200 OK`** — returns single layout object
+
+**Response `404 Not Found`**
+
+```json
+{
+  "message": "Layout with id <id> not found",
+  "error": "Not Found",
+  "statusCode": 404
+}
+```
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+#### `POST /layouts`
+
+Creates a new layout template.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Request body**
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | Yes | Unique template name |
+| `description` | string | Yes | Template description |
+| `content` | string | Yes | Base64-encoded HTML template |
+
+```json
+{
+  "name": "Contact Devsonic Portfolio",
+  "description": "Email template for portfolio contact form",
+  "content": "PGh0bWw+Li4uPC9odG1sPg=="
+}
+```
+
+**Response `201 Created`** — returns created layout object
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+#### `PATCH /layouts/:id`
+
+Updates an existing layout template.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Layout ID |
+
+**Request body** (all fields optional)
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `name` | string | No | Unique template name |
+| `description` | string | No | Template description |
+| `content` | string | No | Base64-encoded HTML template |
+
+**Response `200 OK`** — returns updated layout object
+
+**Response `404 Not Found`** — layout not found
+
+**Response `401 Unauthorized`** — missing or invalid token
+
+---
+
+#### `DELETE /layouts/:id`
+
+Deletes a layout template.
+
+**Auth required:** Yes — `JwtGuard`
+
+**Path parameters**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | number | Layout ID |
+
+**Response `204 No Content`** — deleted successfully
+
+**Response `404 Not Found`** — layout not found
+
+**Response `401 Unauthorized`** — missing or invalid token
 
 ---
 
@@ -904,7 +996,7 @@ Base path: `/notifications`
 
 #### `POST /notifications/portfolio`
 
-Sends a portfolio contact notification email via Brevo. The email is delivered using an HTML template stored in the `layouts` table (key: `Contact Devsonic Portfolio`). All three body fields are required.
+Sends a portfolio contact notification email via Brevo. The email is delivered using an HTML template stored in the `layouts` table (name: `Contact Devsonic Portfolio`). Placeholders `{{name}}`, `{{email}}`, and `{{message}}` in the template are replaced at send time. The message is sent from `no-reply@devsonic.cl` to `mfigueroa@devsonic.cl`.
 
 **Auth required:** No
 
@@ -928,16 +1020,16 @@ Sends a portfolio contact notification email via Brevo. The email is delivered u
 
 ```json
 {
-  "message": "Notificación enviada exitosamente",
+  "message": "Notification sent successfuly",
   "estado": true
 }
 ```
 
-**Response `400 Bad Request` — missing required fields**
+**Response `400 Bad Request`** — missing required fields
 
 ```json
 {
-  "message": "Faltan datos en la solicitud de notificación {name, email, message}"
+  "message": "Missing data in the notification request {name, email, message}"
 }
 ```
 
@@ -945,7 +1037,7 @@ Sends a portfolio contact notification email via Brevo. The email is delivered u
 
 ```json
 {
-  "message": "Error al enviar la solicitud de notificación"
+  "message": "An error has occurred while sending the notification"
 }
 ```
 
@@ -953,23 +1045,13 @@ Sends a portfolio contact notification email via Brevo. The email is delivered u
 
 ## Database Schema
 
-The database is managed by Prisma ORM and backed by PostgreSQL 17. Below is the full schema as defined in `prisma/schema.prisma`.
-
-### Enums
-
-#### `BornMonth`
-
-Used for pet birth month. Values are Spanish month names:
-
-`Enero` | `Febrero` | `Marzo` | `Abril` | `Mayo` | `Junio` | `Julio` | `Agosto` | `Septiembre` | `Octubre` | `Noviembre` | `Diciembre`
-
----
+The database is managed by Prisma ORM and backed by PostgreSQL 17.
 
 ### Configuration Tables
 
 #### `property`
 
-Key-value store for runtime configuration (e.g., `SERVICE_NAME`, `SERVICE_STATUS`, `BREVO_APIKEY`).
+Key-value store for runtime configuration.
 
 | Column | Type | Constraints |
 |---|---|---|
@@ -977,9 +1059,11 @@ Key-value store for runtime configuration (e.g., `SERVICE_NAME`, `SERVICE_STATUS
 | `key` | String | Unique |
 | `value` | String | — |
 
+**Known keys:** `SERVICE_NAME`, `SERVICE_STATUS`, `JWT_SECRET`, `BREVO_APIKEY`
+
 #### `cors_domains`
 
-Stores domains that are allowed by the CORS policy.
+Stores domains allowed by the CORS policy. Loaded at application startup.
 
 | Column | Type | Constraints |
 |---|---|---|
@@ -989,207 +1073,71 @@ Stores domains that are allowed by the CORS policy.
 
 #### `layouts`
 
-HTML email and UI templates stored as base64-encoded content.
+HTML email and UI templates stored as Base64-encoded content.
 
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | Int | Primary key, auto-increment |
 | `name` | String | Unique |
 | `description` | String | — |
-| `content` | String | VarChar(10000), stored as base64 |
+| `content` | String | VarChar(10000), stored as Base64 |
 
 ---
 
-### User Tables
+### CV / Portfolio Tables
 
-#### `users`
-
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | Int | Primary key, auto-increment |
-| `email` | String | Unique |
-| `name` | String | — |
-| `lastname` | String | — |
-| `rut` | Int | Unique (Chilean national ID number) |
-| `rut_dv` | Int | Verification digit |
-| `password` | String | VarChar(3000), encrypted |
-| `active` | Boolean | Default: `true` |
-
-Relations: `pets[]`, `users_roles[]`, `recipes[]`, `notes` (user_notes[]), `reminders` (user_reminders[])
-
-#### `roles`
+#### `about`
 
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | Int | Primary key, auto-increment |
-| `name` | String | Unique |
+| `icon` | String | — |
+| `title` | String | — |
+| `description` | String | — |
 
-#### `users_roles`
-
-Join table linking users to roles.
-
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | Int | Primary key, auto-increment |
-| `user_id` | Int | Foreign key → `users.id` |
-| `role_id` | Int | Foreign key → `roles.id` |
-
----
-
-### Pet Tables
-
-#### `pets`
+#### `contact`
 
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | Int | Primary key, auto-increment |
-| `name` | String | — |
-| `born_year` | Int | — |
-| `born_month` | BornMonth | Enum |
-| `age` | String | — |
-| `desease` | Boolean | Default: `false` |
-| `user_id` | Int | Foreign key → `users.id` |
-| `specie_id` | Int | Foreign key → `pet_specie.id` |
-| `breed` | String | — |
+| `icon` | String | — |
+| `label` | String | — |
+| `value` | String | — |
+| `href` | String | — |
 
-Relations: `pet_weight[]`, `pet_weight_history[]`, `vaccines[]`, `deworming[]`, `recipes[]`, `notes` (pets_notes[]), `reminders` (pets_reminders[])
-
-#### `pet_specie`
+#### `experience`
 
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | Int | Primary key, auto-increment |
-| `name` | String | Unique |
+| `period` | String | — |
+| `role` | String | — |
+| `company` | String | — |
+| `description` | String | — |
+| `technologies` | String | — |
+| `current` | Boolean | Default: `false` |
 
-#### `pet_weight`
-
-Stores the current weight of a pet (one record per pet).
-
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | Int | Primary key, auto-increment |
-| `pet_id` | Int | Unique, foreign key → `pets.id` |
-| `weight` | Float | Default: `0` |
-| `weight_unit_id` | Int | Foreign key → `weight_unit.id`, default: `1` |
-
-#### `pet_weight_history`
-
-Stores the full weight history of a pet (multiple records per pet).
+#### `project`
 
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | Int | Primary key, auto-increment |
-| `pet_id` | Int | Foreign key → `pets.id` |
-| `weight` | Float | Default: `0` |
-| `weight_unit_id` | Int | Foreign key → `weight_unit.id`, default: `1` |
-| `date` | DateTime | Default: `now()` |
+| `title` | String | — |
+| `image` | String | — |
+| `tags` | String | — |
+| `description` | String | Default: `""` |
+| `link` | String | Default: `""` |
+| `githubLink` | String | Default: `""` |
 
-#### `weight_unit`
-
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | Int | Primary key, auto-increment |
-| `name` | String | Unique |
-
----
-
-### Medical / Health Tables
-
-#### `vaccines`
+#### `testimonials`
 
 | Column | Type | Constraints |
 |---|---|---|
 | `id` | Int | Primary key, auto-increment |
-| `name` | String | — |
-| `quantity` | Int | — |
-| `date` | DateTime | Default: `now()` |
-| `content` | String | VarChar(10000) |
-| `pet_id` | Int | Foreign key → `pets.id` |
-
-#### `deworming`
-
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | Int | Primary key, auto-increment |
-| `name` | String | — |
-| `date` | DateTime | Default: `now()` |
-| `content` | String | VarChar(10000) |
-| `quantity` | Int | — |
-| `pet_id` | Int | Foreign key → `pets.id` |
-
-#### `recipes`
-
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | Int | Primary key, auto-increment |
-| `name` | String | — |
-| `content` | String | VarChar(10000) |
-| `date` | DateTime | Default: `now()` |
-| `pet_id` | Int | Foreign key → `pets.id` |
-| `user_id` | Int | Foreign key → `users.id` |
-
----
-
-### Notes and Reminders
-
-#### `notes`
-
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | Int | Primary key, auto-increment |
-| `name` | String | — |
-| `content` | String | VarChar(10000) |
-| `date` | DateTime | Default: `now()` |
-
-#### `user_notes`
-
-Join table linking notes to users.
-
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | Int | Primary key, auto-increment |
-| `user_id` | Int | Foreign key → `users.id` |
-| `notes_id` | Int | Foreign key → `notes.id` |
-
-#### `pets_notes`
-
-Join table linking notes to pets.
-
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | Int | Primary key, auto-increment |
-| `pet_id` | Int | Foreign key → `pets.id` |
-| `notes_id` | Int | Foreign key → `notes.id` |
-
-#### `reminders`
-
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | Int | Primary key, auto-increment |
-| `name` | String | — |
-| `content` | String | VarChar(10000) |
-| `date_creation` | DateTime | Default: `now()` |
-| `date_due` | DateTime | — |
-
-#### `user_reminders`
-
-Join table linking reminders to users.
-
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | Int | Primary key, auto-increment |
-| `user_id` | Int | Foreign key → `users.id` |
-| `reminders_id` | Int | Foreign key → `reminders.id` |
-
-#### `pets_reminders`
-
-Join table linking reminders to pets.
-
-| Column | Type | Constraints |
-|---|---|---|
-| `id` | Int | Primary key, auto-increment |
-| `pet_id` | Int | Foreign key → `pets.id` |
-| `reminders_id` | Int | Foreign key → `reminders.id` |
+| `quote` | String | — |
+| `author` | String | — |
+| `role` | String | — |
+| `avatar` | String | — |
 
 ---
 

@@ -11,7 +11,7 @@ export class LayoutsService {
   async findAll() {
     try {
       await this.prisma.$connect();
-      return await this.prisma.layouts.findMany();
+      return await this.prisma.layouts.findMany({ orderBy: { id: 'desc' } });
     } finally {
       await this.prisma.$disconnect();
     }

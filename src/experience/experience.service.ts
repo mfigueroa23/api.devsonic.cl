@@ -11,7 +11,7 @@ export class ExperienceService {
   async findAll() {
     try {
       await this.prisma.$connect();
-      return await this.prisma.experience.findMany();
+      return await this.prisma.experience.findMany({ orderBy: { id: 'desc' } });
     } finally {
       await this.prisma.$disconnect();
     }

@@ -11,7 +11,7 @@ export class ContactService {
   async findAll() {
     try {
       await this.prisma.$connect();
-      return await this.prisma.contact.findMany();
+      return await this.prisma.contact.findMany({ orderBy: { id: 'desc' } });
     } finally {
       await this.prisma.$disconnect();
     }

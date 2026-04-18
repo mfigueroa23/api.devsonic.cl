@@ -11,7 +11,7 @@ export class ProjectService {
   async findAll() {
     try {
       await this.prisma.$connect();
-      return await this.prisma.project.findMany();
+      return await this.prisma.project.findMany({ orderBy: { id: 'desc' } });
     } finally {
       await this.prisma.$disconnect();
     }

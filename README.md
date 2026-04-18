@@ -1141,6 +1141,14 @@ HTML email and UI templates stored as Base64-encoded content.
 
 ---
 
+## Changelog
+
+### 3.0.1
+- All `GET` list endpoints now return records ordered by `id DESC` (most recently created first).
+
+### 3.0.0
+- Initial stable release.
+
 ## Author
 
 **Marco Figueroa**

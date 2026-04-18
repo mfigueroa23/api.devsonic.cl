@@ -11,7 +11,7 @@ export class TestimonialsService {
   async findAll() {
     try {
       await this.prisma.$connect();
-      return await this.prisma.testimonials.findMany();
+      return await this.prisma.testimonials.findMany({ orderBy: { id: 'desc' } });
     } finally {
       await this.prisma.$disconnect();
     }

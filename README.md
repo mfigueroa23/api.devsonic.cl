@@ -1,5 +1,7 @@
 # API DevSonic
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Backend API service built with NestJS, Prisma, and PostgreSQL for the DevSonic portfolio ecosystem. Provides RESTful endpoints for CV/portfolio data management, email notifications, and layout template storage.
 
 ## Tech Stack

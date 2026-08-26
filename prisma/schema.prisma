@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model property {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
+}
+
+model cors_domains {
+  id          Int     @id @default(autoincrement())
+  domain      String  @unique
+  habilitated Boolean @default(false)
+}
+
+model layouts {
+  id          Int    @id @default(autoincrement())
+  name        String @unique
+  description String
+  content     String @db.VarChar(10000)
+}
+
+model about {
+  id          Int    @id @default(autoincrement())
+  icon        String
+  title       String
+  description String
+}
+
+model contact {
+  id          Int    @id @default(autoincrement())
+  icon        String
+  label       String
+  value       String
+  href        String
+}
+
+model experience {
+  id            Int    @id @default(autoincrement())
+  period        String
+  role          String
+  company       String
+  description   String
+  technologies  String
+  current       Boolean @default(false)
+}
+
+model project {
+  id          Int    @id @default(autoincrement())
+  title       String
+  image       String
+  tags        String
+  description String @default("")
+  link        String @default("")
+  githubLink  String @default("")
+}
+
+model testimonials {
+  id          Int    @id @default(autoincrement())
+  quote       String
+  author      String
+  role        String
+  avatar      String
+}
